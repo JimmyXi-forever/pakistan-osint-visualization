@@ -1,0 +1,103 @@
+{
+  "metadata": {
+    "schemaVersion": "1.0",
+    "mode": "manual-seed",
+    "generatedAt": "2026-07-02T00:00:00.000Z",
+    "query": "Manual seed from reviewed incidents",
+    "timespan": "seed",
+    "reviewedCount": 2,
+    "autoCandidateCount": 0,
+    "caveat": "这是在线自动数据文件的初始种子。部署后 GitHub Actions 会定时用 GDELT 候选报道刷新该文件。"
+  },
+  "incidents": [
+    {
+      "id": "pk-2026-06-27-karachi-rangers-hq",
+      "date": "2026-06-27",
+      "country": "Pakistan",
+      "region": "Sindh",
+      "city": "Karachi",
+      "latitude": 24.9206,
+      "longitude": 67.1167,
+      "title": "卡拉奇 Sindh Rangers 总部遭爆炸物车辆袭击",
+      "incidentType": "恐袭",
+      "severity": "高",
+      "confidence": "高",
+      "reviewStatus": "reviewed",
+      "actor": "Jamaat-ul-Ahrar reportedly claimed responsibility",
+      "target": "Pakistan Rangers provincial headquarters",
+      "fatalities": {
+        "reportedMinimum": 6,
+        "reportedMaximum": 10,
+        "note": "AP 报道至少 3 名准军事人员和 3 名袭击者死亡；其他媒体对安全人员和袭击者数字存在差异。"
+      },
+      "summary": "公开报道显示，2026-06-27 一名武装人员驾驶装载爆炸物的车辆冲撞位于卡拉奇 Gulistan-e-Jauhar 一带的 Pakistan Rangers 省级总部，随后发生交火。该事件被报道为近期巴基斯坦针对安全力量袭击上升的一部分。",
+      "sources": [
+        {
+          "name": "Associated Press",
+          "url": "https://apnews.com/article/c587c48d9bceba758ede65b34bea75cd"
+        },
+        {
+          "name": "Economic Times / PTI",
+          "url": "https://m.economictimes.com/news/international/world-news/pakistans-karachi-rocked-by-explosion-gunfire-reported/articleshow/132039519.cms"
+        }
+      ],
+      "media": [],
+      "mediaNote": "已核验来源中，AP 正文未提供可用现场图片；Economic Times 页面图片标注为 AI generated image for representation，因此未作为现场信源图片展示。",
+      "lastReviewed": "2026-06-30"
+    },
+    {
+      "id": "pk-2026-06-29-afghan-border-operation",
+      "date": "2026-06-29",
+      "country": "Pakistan",
+      "region": "Khyber Pakhtunkhwa / Afghan border",
+      "city": "Border area",
+      "latitude": 33.7645,
+      "longitude": 70.5146,
+      "title": "巴阿边境涉恐目标地面行动及空袭报道",
+      "incidentType": "关联反恐行动",
+      "severity": "中",
+      "confidence": "中",
+      "reviewStatus": "reviewed",
+      "actor": "Pakistani security forces; alleged TTP-linked targets",
+      "target": "Reported militant hideouts along the Pakistan-Afghanistan border",
+      "fatalities": {
+        "reportedMinimum": 29,
+        "reportedMaximum": 29,
+        "note": "AP 引述巴基斯坦方面称 29 名武装分子死亡；Guardian 引述阿富汗方面称跨境空袭造成平民伤亡。"
+      },
+      "summary": "在卡拉奇袭击后，巴基斯坦方面称其在巴阿边境针对 TTP 相关目标实施地面行动和空袭。该条目作为涉恐关联事件纳入地图，便于展示恐袭后的安全响应链条，但不应与在巴基斯坦境内发生的恐袭案件混同。",
+      "sources": [
+        {
+          "name": "Associated Press",
+          "url": "https://apnews.com/article/fab8de4e4e82590da5a259587e0b84ff"
+        },
+        {
+          "name": "The Guardian",
+          "url": "https://www.theguardian.com/world/2026/jun/29/pakistan-deadly-airstrikes-afghanistan-border"
+        }
+      ],
+      "media": [
+        {
+          "title": "Chamkani district airstrike aftermath",
+          "imageUrl": "https://i.guim.co.uk/img/media/1e898d19b651fc4b4dbddfa7038b4572fb387bf1/837_1_4915_3932/master/4915.jpg?crop=none&dpr=1&s=none&width=465",
+          "caption": "Paktia province Chamkani district airstrike aftermath, showing a ruined multi-storey building.",
+          "credit": "Saifullah Zahir/AP, via The Guardian",
+          "sourceName": "The Guardian / AP",
+          "sourceUrl": "https://www.theguardian.com/world/2026/jun/29/pakistan-deadly-airstrikes-afghanistan-border",
+          "verificationNote": "Guardian 图注说明为 Chamkani district, Paktia province 空袭后建筑损毁现场。"
+        },
+        {
+          "title": "Debris at the Chamkani airstrike scene",
+          "imageUrl": "https://i.guim.co.uk/img/media/b5e734b1d6277915af802f2a6b1cb40bb93e103a/842_0_5000_4000/master/5000.jpg?crop=none&dpr=1&s=none&width=445",
+          "caption": "Debris and rubble at the scene of the airstrikes in Chamkani district.",
+          "credit": "Saifullah Zahir/AP, via The Guardian",
+          "sourceName": "The Guardian / AP",
+          "sourceUrl": "https://www.theguardian.com/world/2026/jun/29/pakistan-deadly-airstrikes-afghanistan-border",
+          "verificationNote": "Guardian 图注说明为 Chamkani district 空袭现场瓦砾与碎片。"
+        }
+      ],
+      "mediaNote": "该条为恐袭后的关联反恐行动，图片来自 Guardian 页面中带 AP 摄影署名的现场图注。",
+      "lastReviewed": "2026-06-30"
+    }
+  ]
+}
