@@ -1,0 +1,4448 @@
+# 涉恐开源情报的可视化呈现-以巴基斯坦恐袭案件为例
+# 整个项目代码汇总
+# 生成时间：2026-07-02
+
+
+
+===== README.md =====
+
+# 涉恐开源情报的可视化呈现 - 以巴基斯坦恐袭案件为例
+
+这是一个可直接运行并可部署上线的静态前端项目，用于展示公开报道中的巴基斯坦涉恐事件。页面支持按时间、地区、事件类型和关键词筛选，并在地图上交互查看详情。
+
+事件详情支持展示图片信源。图片只收录带有明确来源页面、图注和摄影/机构署名的信息；无法确认现场关联性的示意图、AI 生成图或无出处图片不作为证据图片展示。
+
+项目已预置在线自动更新链路：GitHub Actions 定时查询 GDELT 候选报道，生成 `data/live-incidents.json`，再部署到 GitHub Pages。自动候选会标注为“待核验”，不与人工核验事件混同。
+
+## 快速运行
+
+```bash
+cd /Users/fangfangfangfang/涉恐开源情报的可视化呈现-以巴基斯坦恐袭案件为例
+npm run dev
+```
+
+然后访问：
+
+```text
+http://localhost:4173
+```
+
+也可以不用 npm，直接运行：
+
+```bash
+python3 -m http.server 4173
+```
+
+## 在线部署
+
+1. 在 GitHub 新建仓库。
+2. 上传本项目全部文件。
+3. 进入仓库 `Settings -> Pages`。
+4. 在 `Build and deployment` 中选择 `GitHub Actions`。
+5. 推送到 `main` 或 `master` 分支后，`.github/workflows/deploy-pages.yml` 会自动部署。
+6. 部署完成后，GitHub 会给出公开访问网址。
+
+定时更新规则：
+
+- 每小时第 17 分钟运行一次。
+- 自动运行 `npm run update:live` 查询 GDELT。
+- 自动运行 `npm run validate` 校验数据。
+- 自动发布最新静态网站。
+
+## 项目结构
+
+```text
+.
+├── index.html                  # 页面入口，引用 Leaflet 地图和前端脚本
+├── src/
+│   ├── app.js                  # 数据加载、筛选、地图标记、详情面板
+│   └── styles.css              # 页面样式
+├── data/
+│   ├── incidents.json          # 已核验并手动整理的事件数据，含来源和图片信源字段
+│   └── live-incidents.json     # 在线版读取的数据；部署时由自动脚本刷新
+├── scripts/
+│   ├── fetch-gdelt.mjs         # 自动搜索近一周候选报道
+│   ├── update-live-data.mjs    # 生成在线实时数据
+│   └── validate-data.mjs       # 校验 incidents.json 结构
+├── .github/workflows/
+│   └── deploy-pages.yml        # GitHub Pages 定时部署与自动更新
+├── docs/
+│   ├── data-methodology.md     # 数据方法和更新流程
+│   └── source-log.md           # 初版来源记录
+├── AGENTS.md                   # 给 Codex 的项目说明
+└── CLAUDE.md                   # 给 Claude Code 的项目说明
+```
+
+## 数据更新流程
+
+1. 运行候选报道搜索：
+
+```bash
+npm run fetch:data
+```
+
+2. 人工核验 `data/gdelt-articles.latest.json` 中的候选报道。
+3. 将确认的案件整理进 `data/incidents.json`。
+4. 校验数据：
+
+```bash
+npm run validate
+```
+
+## 自动更新流程
+
+本地或 GitHub Actions 中运行：
+
+```bash
+npm run update:live
+```
+
+该命令会：
+
+- 读取 `data/incidents.json` 中的人工核验事件。
+- 查询 GDELT 近 3 天巴基斯坦涉恐候选报道。
+- 转换为带 `reviewStatus: "auto-candidate"` 的候选事件。
+- 写入 `data/live-incidents.json`。
+- 保留原始候选报道到 `data/gdelt-articles.latest.json`。
+
+自动候选只用于态势发现，进入正式分析或论文引用前仍需人工核验。
+
+## 当前数据说明
+
+初版数据最后核验日期为 2026-06-30。页面优先读取 `data/live-incidents.json`；若不存在或读取失败，则回退到 `data/incidents.json`。页面默认显示“恐袭”类型；“关联反恐行动”和“未核验候选”可通过事件类型筛选查看。
+
+过去一周公开报道中，能明确定位并由主流公开来源核验的核心巴基斯坦境内恐袭案件为卡拉奇 Sindh Rangers 总部袭击。后续更新只需追加 `data/incidents.json`，前端筛选和地图会自动读取。
+
+
+===== AGENTS.md =====
+
+# Codex 项目说明
+
+## 目标
+
+本项目用于把巴基斯坦涉恐开源情报以在线 HTML 方式可视化展示。优先保持静态、透明、易运行。
+
+## 运行
+
+```bash
+npm run dev
+```
+
+访问 `http://localhost:4173`。
+
+## 常用任务
+
+- 更新事件数据：编辑 `data/incidents.json`。
+- 校验数据结构：运行 `npm run validate`。
+- 抓取候选报道：运行 `npm run fetch:data`，再人工核验。
+- 生成在线数据：运行 `npm run update:live`，会写入 `data/live-incidents.json`。
+- 修改页面逻辑：编辑 `src/app.js`。
+- 修改样式：编辑 `src/styles.css`。
+
+## 约定
+
+- 不把“恐袭”和“反恐行动”混写；用 `incidentType` 区分。
+- 涉及伤亡数字分歧时，保留区间和来源说明。
+- 新增事件必须包含至少一个来源链接。
+- 自动候选必须保留 `reviewStatus: "auto-candidate"`，人工确认后再改为 `reviewed`。
+- 地图坐标可以先精确到城市中心，但要在摘要中说明具体地点。
+
+
+===== CLAUDE.md =====
+
+# Claude Code 项目说明
+
+## 项目定位
+
+这是一个静态 HTML/JavaScript 可视化项目，主题为“涉恐开源情报的可视化呈现 - 以巴基斯坦恐袭案件为例”。
+
+## 启动方式
+
+```bash
+npm run dev
+```
+
+打开 `http://localhost:4173`。
+
+## 文件导航
+
+- `index.html`：页面入口。
+- `src/app.js`：筛选、列表、地图和详情交互。
+- `src/styles.css`：视觉样式。
+- `data/incidents.json`：人工核验后的事件数据。
+- `data/live-incidents.json`：在线自动版读取的数据。
+- `scripts/fetch-gdelt.mjs`：近一周候选报道搜索脚本。
+- `scripts/update-live-data.mjs`：生成在线实时数据。
+- `scripts/validate-data.mjs`：数据结构校验脚本。
+- `.github/workflows/deploy-pages.yml`：GitHub Pages 定时更新与部署。
+- `docs/data-methodology.md`：数据方法。
+- `docs/source-log.md`：来源记录。
+
+## 开发原则
+
+- 保持无构建工具依赖，方便在不同 AI 编码环境中直接运行。
+- 新增事件先核验来源，再写入 `incidents.json`。
+- 自动候选只进入 `live-incidents.json`，不要直接当作已核验事实。
+- 不确定信息使用 `confidence` 和 `fatalities.note` 明确说明。
+
+
+===== package.json =====
+
+{
+  "name": "pakistan-terrorism-osint-visualization",
+  "version": "0.1.0",
+  "private": true,
+  "description": "涉恐开源情报的可视化呈现：以巴基斯坦恐袭案件为例",
+  "scripts": {
+    "dev": "python3 -m http.server 4173",
+    "start": "npm run dev",
+    "serve": "python3 -m http.server 4173",
+    "validate": "node scripts/validate-data.mjs",
+    "fetch:data": "node scripts/fetch-gdelt.mjs",
+    "update:live": "node scripts/update-live-data.mjs"
+  },
+  "keywords": [
+    "osint",
+    "terrorism",
+    "pakistan",
+    "visualization",
+    "leaflet"
+  ],
+  "license": "UNLICENSED"
+}
+
+
+===== index.html =====
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>涉恐开源情报的可视化呈现 - 以巴基斯坦恐袭案件为例</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIINfQ7O67U8CmPlb5W7aJ0Mx0cwSHv95hk="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workspace">
+        <aside class="panel" aria-label="筛选与事件列表">
+          <div class="title-block">
+            <p class="eyebrow">Pakistan OSINT Watch</p>
+            <h1>涉恐开源情报可视化</h1>
+            <p class="subtitle">过去一周公开报道事件，支持时间、地区、类型筛选与地图交互。</p>
+            <p class="scope-note">数据窗口：2026-06-23 至 2026-06-30；默认显示已核验恐袭案件。</p>
+            <p class="data-status" id="dataStatus">正在读取在线数据...</p>
+          </div>
+
+          <form class="filters" id="filters">
+            <label>
+              起始日期
+              <input id="startDate" type="date" />
+            </label>
+            <label>
+              结束日期
+              <input id="endDate" type="date" />
+            </label>
+            <label>
+              地区
+              <select id="regionFilter">
+                <option value="all">全部地区</option>
+              </select>
+            </label>
+            <label>
+              事件类型
+              <select id="typeFilter">
+                <option value="all">全部类型</option>
+              </select>
+            </label>
+            <label>
+              关键词
+              <input id="keywordFilter" type="search" placeholder="城市、组织、目标..." />
+            </label>
+            <button class="reset-button" type="button" id="resetButton">重置</button>
+          </form>
+
+          <div class="stats" id="stats" aria-live="polite"></div>
+          <div class="incident-list" id="incidentList" aria-label="事件卡片"></div>
+        </aside>
+
+        <section class="map-area" aria-label="交互地图和事件详情">
+          <div id="map" class="map"></div>
+          <div class="legend" aria-label="地图图例">
+            <span><i class="legend-dot attack"></i>恐袭</span>
+            <span><i class="legend-dot response"></i>关联反恐行动</span>
+          </div>
+          <article class="detail" id="detail">
+            <p class="empty">点击地图标记或左侧事件卡片查看详情。</p>
+          </article>
+        </section>
+      </section>
+    </main>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
+
+
+===== 可视化呈现.html =====
+
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>涉恐开源情报的可视化呈现 - 以巴基斯坦恐袭案件为例</title>
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIINfQ7O67U8CmPlb5W7aJ0Mx0cwSHv95hk="
+    crossorigin=""
+  />
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #18202a;
+      --muted: #657282;
+      --line: #d9e0e8;
+      --panel: #f7f9fb;
+      --paper: #ffffff;
+      --accent: #b73535;
+      --accent-strong: #8f2323;
+      --teal: #176f73;
+      --amber: #b46a12;
+      --shadow: 0 16px 40px rgba(22, 32, 42, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    /* Local Leaflet fallback: keeps map tiles positioned and clipped even if CDN CSS fails. */
+    .leaflet-container {
+      position: relative;
+      overflow: hidden;
+      background: #dce5ed;
+      outline-offset: 1px;
+      font: 12px/1.5 "Helvetica Neue", Arial, Helvetica, sans-serif;
+    }
+
+    .leaflet-pane,
+    .leaflet-tile,
+    .leaflet-marker-icon,
+    .leaflet-marker-shadow,
+    .leaflet-tile-container,
+    .leaflet-pane > svg,
+    .leaflet-pane > canvas,
+    .leaflet-zoom-box,
+    .leaflet-image-layer,
+    .leaflet-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    .leaflet-tile,
+    .leaflet-marker-icon,
+    .leaflet-marker-shadow {
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .leaflet-tile {
+      width: 256px;
+      height: 256px;
+      max-width: none !important;
+      max-height: none !important;
+    }
+
+    .leaflet-map-pane {
+      z-index: 400;
+    }
+
+    .leaflet-tile-pane {
+      z-index: 200;
+    }
+
+    .leaflet-overlay-pane {
+      z-index: 400;
+    }
+
+    .leaflet-marker-pane {
+      z-index: 600;
+    }
+
+    .leaflet-tooltip-pane {
+      z-index: 650;
+    }
+
+    .leaflet-popup-pane {
+      z-index: 700;
+    }
+
+    .leaflet-control {
+      position: relative;
+      z-index: 800;
+      pointer-events: auto;
+    }
+
+    .leaflet-top,
+    .leaflet-bottom {
+      position: absolute;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    .leaflet-top {
+      top: 0;
+    }
+
+    .leaflet-right {
+      right: 0;
+    }
+
+    .leaflet-bottom {
+      bottom: 0;
+    }
+
+    .leaflet-left {
+      left: 0;
+    }
+
+    .leaflet-control {
+      float: left;
+      clear: both;
+      margin: 10px;
+    }
+
+    .leaflet-right .leaflet-control {
+      float: right;
+    }
+
+    .leaflet-control-zoom a {
+      display: block;
+      width: 28px;
+      height: 28px;
+      border-bottom: 1px solid #ccc;
+      background: #fff;
+      color: #222;
+      text-align: center;
+      text-decoration: none;
+      font: bold 18px/28px Arial, Helvetica, sans-serif;
+    }
+
+    .leaflet-control-zoom a:last-child {
+      border-bottom: 0;
+    }
+
+    .leaflet-control-attribution {
+      padding: 0 5px;
+      background: rgba(255, 255, 255, 0.8);
+    }
+
+    .leaflet-interactive {
+      cursor: pointer;
+    }
+
+    .leaflet-popup {
+      position: absolute;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .leaflet-popup-content-wrapper {
+      border-radius: 6px;
+      padding: 1px;
+      background: #fff;
+      box-shadow: 0 3px 14px rgba(0, 0, 0, 0.25);
+      text-align: left;
+    }
+
+    .leaflet-popup-content {
+      margin: 13px 19px;
+      line-height: 1.4;
+    }
+
+    .leaflet-popup-tip-container {
+      position: absolute;
+      left: 50%;
+      width: 40px;
+      height: 20px;
+      margin-left: -20px;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .leaflet-popup-tip {
+      width: 17px;
+      height: 17px;
+      margin: -10px auto 0;
+      transform: rotate(45deg);
+      background: #fff;
+      box-shadow: 0 3px 14px rgba(0, 0, 0, 0.25);
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      color: var(--ink);
+      background: #e9eef3;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    .app-shell {
+      height: 100vh;
+      padding: 18px;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(340px, 430px) minmax(0, 1fr);
+      height: calc(100vh - 36px);
+      min-height: 0;
+      overflow: hidden;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel {
+      display: flex;
+      min-height: 0;
+      overflow: hidden;
+      flex-direction: column;
+      gap: 18px;
+      padding: 22px;
+      border-right: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    .title-block {
+      display: grid;
+      gap: 8px;
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: var(--teal);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 26px;
+      line-height: 1.18;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .scope-note {
+      margin: 0;
+      border-left: 3px solid var(--teal);
+      padding-left: 10px;
+      color: #435262;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .filters label {
+      display: grid;
+      gap: 6px;
+      color: #334151;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .filters label:nth-last-of-type(1) {
+      grid-column: 1 / -1;
+    }
+
+    input,
+    select,
+    button {
+      min-height: 40px;
+      width: 100%;
+      border: 1px solid #c9d2dc;
+      border-radius: 6px;
+      padding: 8px 10px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .reset-button {
+      grid-column: 1 / -1;
+      border-color: var(--accent);
+      color: #fff;
+      background: var(--accent);
+      font-weight: 700;
+    }
+
+    .reset-button:hover {
+      background: var(--accent-strong);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .stat {
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 20px;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .incident-list {
+      display: grid;
+      min-height: 0;
+      gap: 10px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .incident-card {
+      display: grid;
+      gap: 8px;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--accent);
+      border-radius: 6px;
+      padding: 12px;
+      background: #fff;
+      text-align: left;
+    }
+
+    .incident-card[data-type="关联反恐行动"] {
+      border-left-color: var(--teal);
+    }
+
+    .incident-card:hover,
+    .incident-card.active {
+      border-color: #9fb0bf;
+      background: #fdf7f3;
+    }
+
+    .incident-card h2 {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.35;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      background: #eef2f5;
+      color: #374759;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .tag.high {
+      background: #ffe7e1;
+      color: var(--accent-strong);
+    }
+
+    .tag.medium {
+      background: #fff1d7;
+      color: var(--amber);
+    }
+
+    .map-area {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      background: #dce5ed;
+    }
+
+    .legend {
+      position: absolute;
+      z-index: 3;
+      top: 14px;
+      right: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      max-width: calc(100% - 28px);
+      border: 1px solid rgba(120, 138, 154, 0.45);
+      border-radius: 6px;
+      padding: 8px 10px;
+      background: rgba(255, 255, 255, 0.94);
+      color: #354455;
+      font-size: 12px;
+      font-weight: 700;
+      box-shadow: 0 8px 22px rgba(22, 32, 42, 0.12);
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+    }
+
+    .legend-dot.attack {
+      background: #d04a3a;
+      border: 2px solid #8f2323;
+    }
+
+    .legend-dot.response {
+      background: #1d8d91;
+      border: 2px solid #176f73;
+    }
+
+    .map {
+      position: relative;
+      z-index: 1;
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 0;
+      width: 100%;
+    }
+
+    .detail {
+      position: relative;
+      z-index: 2;
+      flex: 0 0 auto;
+      display: grid;
+      gap: 10px;
+      min-height: 180px;
+      max-height: 32vh;
+      overflow: auto;
+      padding: 18px 22px;
+      border-top: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.96);
+    }
+
+    .detail h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .detail p {
+      margin: 0;
+      color: #344353;
+      line-height: 1.6;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .detail-cell {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+      background: #fbfcfd;
+    }
+
+    .detail-cell span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .detail-cell strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 14px;
+    }
+
+    .media-section {
+      display: grid;
+      gap: 10px;
+    }
+
+    .media-section h3 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .media-card {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fbfcfd;
+    }
+
+    .media-card img {
+      display: block;
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      background: #dce5ed;
+    }
+
+    .media-card figcaption {
+      display: grid;
+      gap: 4px;
+      padding: 10px;
+      color: #3b4a5a;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .media-card figcaption strong {
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    .media-card figcaption small,
+    .media-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .media-card a {
+      color: var(--teal);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .media-card a:hover {
+      text-decoration: underline;
+    }
+
+    .sources {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .sources a {
+      color: var(--teal);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .sources a:hover {
+      text-decoration: underline;
+    }
+
+    .empty {
+      align-self: center;
+      color: var(--muted);
+    }
+
+    .leaflet-popup-content {
+      min-width: 220px;
+    }
+
+    @media (max-width: 920px) {
+      .app-shell {
+        padding: 0;
+      }
+
+      .workspace {
+        grid-template-columns: 1fr;
+        height: auto;
+        min-height: 100vh;
+        border: 0;
+        border-radius: 0;
+      }
+
+      .panel {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .map {
+        height: 56vh;
+        min-height: 420px;
+      }
+
+      .detail-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .media-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 540px) {
+      .filters,
+      .stats,
+      .detail-grid {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <section class="workspace">
+      <aside class="panel" aria-label="筛选与事件列表">
+        <div class="title-block">
+          <p class="eyebrow">Pakistan OSINT Watch</p>
+          <h1>涉恐开源情报可视化</h1>
+          <p class="subtitle">过去一周公开报道事件，支持时间、地区、类型筛选与地图交互。</p>
+          <p class="scope-note">数据窗口：2026-06-23 至 2026-06-30；默认显示已核验恐袭案件。</p>
+        </div>
+
+        <form class="filters" id="filters">
+          <label>
+            起始日期
+            <input id="startDate" type="date" />
+          </label>
+          <label>
+            结束日期
+            <input id="endDate" type="date" />
+          </label>
+          <label>
+            地区
+            <select id="regionFilter">
+              <option value="all">全部地区</option>
+            </select>
+          </label>
+          <label>
+            事件类型
+            <select id="typeFilter">
+              <option value="all">全部类型</option>
+            </select>
+          </label>
+          <label>
+            关键词
+            <input id="keywordFilter" type="search" placeholder="城市、组织、目标..." />
+          </label>
+          <button class="reset-button" type="button" id="resetButton">重置</button>
+        </form>
+
+        <div class="stats" id="stats" aria-live="polite"></div>
+        <div class="incident-list" id="incidentList" aria-label="事件卡片"></div>
+      </aside>
+
+      <section class="map-area" aria-label="交互地图和事件详情">
+        <div id="map" class="map"></div>
+        <div class="legend" aria-label="地图图例">
+          <span><i class="legend-dot attack"></i>恐袭</span>
+          <span><i class="legend-dot response"></i>关联反恐行动</span>
+        </div>
+        <article class="detail" id="detail">
+          <p class="empty">点击地图标记或左侧事件卡片查看详情。</p>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script>
+    /* ===== 内嵌事件数据（来自 data/incidents.json） ===== */
+    const EMBEDDED_INCIDENTS = [
+      {
+        "id": "pk-2026-06-27-karachi-rangers-hq",
+        "date": "2026-06-27",
+        "country": "Pakistan",
+        "region": "Sindh",
+        "city": "Karachi",
+        "latitude": 24.9206,
+        "longitude": 67.1167,
+        "title": "卡拉奇 Sindh Rangers 总部遭爆炸物车辆袭击",
+        "incidentType": "恐袭",
+        "severity": "高",
+        "confidence": "高",
+        "actor": "Jamaat-ul-Ahrar reportedly claimed responsibility",
+        "target": "Pakistan Rangers provincial headquarters",
+        "fatalities": {
+          "reportedMinimum": 6,
+          "reportedMaximum": 10,
+          "note": "AP 报道至少 3 名准军事人员和 3 名袭击者死亡；其他媒体对安全人员和袭击者数字存在差异。"
+        },
+        "summary": "公开报道显示，2026-06-27 一名武装人员驾驶装载爆炸物的车辆冲撞位于卡拉奇 Gulistan-e-Jauhar 一带的 Pakistan Rangers 省级总部，随后发生交火。该事件被报道为近期巴基斯坦针对安全力量袭击上升的一部分。",
+        "sources": [
+          { "name": "Associated Press", "url": "https://apnews.com/article/c587c48d9bceba758ede65b34bea75cd" },
+          { "name": "Economic Times / PTI", "url": "https://m.economictimes.com/news/international/world-news/pakistans-karachi-rocked-by-explosion-gunfire-reported/articleshow/132039519.cms" }
+        ],
+        "media": [],
+        "mediaNote": "已核验来源中，AP 正文未提供可用现场图片；Economic Times 页面图片标注为 AI generated image for representation，因此未作为现场信源图片展示。",
+        "lastReviewed": "2026-06-30"
+      },
+      {
+        "id": "pk-2026-06-29-afghan-border-operation",
+        "date": "2026-06-29",
+        "country": "Pakistan",
+        "region": "Khyber Pakhtunkhwa / Afghan border",
+        "city": "Border area",
+        "latitude": 33.7645,
+        "longitude": 70.5146,
+        "title": "巴阿边境涉恐目标地面行动及空袭报道",
+        "incidentType": "关联反恐行动",
+        "severity": "中",
+        "confidence": "中",
+        "actor": "Pakistani security forces; alleged TTP-linked targets",
+        "target": "Reported militant hideouts along the Pakistan-Afghanistan border",
+        "fatalities": {
+          "reportedMinimum": 29,
+          "reportedMaximum": 29,
+          "note": "AP 引述巴基斯坦方面称 29 名武装分子死亡；Guardian 引述阿富汗方面称跨境空袭造成平民伤亡。"
+        },
+        "summary": "在卡拉奇袭击后，巴基斯坦方面称其在巴阿边境针对 TTP 相关目标实施地面行动和空袭。该条目作为涉恐关联事件纳入地图，便于展示恐袭后的安全响应链条，但不应与在巴基斯坦境内发生的恐袭案件混同。",
+        "sources": [
+          { "name": "Associated Press", "url": "https://apnews.com/article/fab8de4e4e82590da5a259587e0b84ff" },
+          { "name": "The Guardian", "url": "https://www.theguardian.com/world/2026/jun/29/pakistan-deadly-airstrikes-afghanistan-border" }
+        ],
+        "media": [
+          {
+            "title": "Chamkani district airstrike aftermath",
+            "imageUrl": "https://i.guim.co.uk/img/media/1e898d19b651fc4b4dbddfa7038b4572fb387bf1/837_1_4915_3932/master/4915.jpg?crop=none&dpr=1&s=none&width=465",
+            "caption": "Paktia province Chamkani district airstrike aftermath, showing a ruined multi-storey building.",
+            "credit": "Saifullah Zahir/AP, via The Guardian",
+            "sourceName": "The Guardian / AP",
+            "sourceUrl": "https://www.theguardian.com/world/2026/jun/29/pakistan-deadly-airstrikes-afghanistan-border",
+            "verificationNote": "Guardian 图注说明为 Chamkani district, Paktia province 空袭后建筑损毁现场。"
+          },
+          {
+            "title": "Debris at the Chamkani airstrike scene",
+            "imageUrl": "https://i.guim.co.uk/img/media/b5e734b1d6277915af802f2a6b1cb40bb93e103a/842_0_5000_4000/master/5000.jpg?crop=none&dpr=1&s=none&width=445",
+            "caption": "Debris and rubble at the scene of the airstrikes in Chamkani district.",
+            "credit": "Saifullah Zahir/AP, via The Guardian",
+            "sourceName": "The Guardian / AP",
+            "sourceUrl": "https://www.theguardian.com/world/2026/jun/29/pakistan-deadly-airstrikes-afghanistan-border",
+            "verificationNote": "Guardian 图注说明为 Chamkani district 空袭现场瓦砾与碎片。"
+          }
+        ],
+        "mediaNote": "该条为恐袭后的关联反恐行动，图片来自 Guardian 页面中带 AP 摄影署名的现场图注。",
+        "lastReviewed": "2026-06-30"
+      }
+    ];
+
+    /* ===== 应用逻辑 ===== */
+    const state = {
+      incidents: EMBEDDED_INCIDENTS,
+      markers: new Map(),
+      selectedId: null,
+    };
+
+    const map = L.map("map", {
+      zoomControl: true,
+      scrollWheelZoom: true,
+    }).setView([30.3753, 69.3451], 5);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(map);
+
+    const markerLayer = L.layerGroup().addTo(map);
+
+    const elements = {
+      startDate: document.querySelector("#startDate"),
+      endDate: document.querySelector("#endDate"),
+      regionFilter: document.querySelector("#regionFilter"),
+      typeFilter: document.querySelector("#typeFilter"),
+      keywordFilter: document.querySelector("#keywordFilter"),
+      resetButton: document.querySelector("#resetButton"),
+      incidentList: document.querySelector("#incidentList"),
+      detail: document.querySelector("#detail"),
+      stats: document.querySelector("#stats"),
+    };
+
+    const formatDate = new Intl.DateTimeFormat("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+
+    const severityClass = {
+      高: "high",
+      中: "medium",
+      低: "low",
+    };
+
+    function init() {
+      populateControls(state.incidents);
+      setDefaultDates(state.incidents);
+      bindEvents();
+      render();
+      refreshMapLayout();
+    }
+
+    function populateControls(incidents) {
+      const regions = [...new Set(incidents.map((item) => item.region))].sort();
+      const types = [...new Set(incidents.map((item) => item.incidentType))].sort();
+
+      for (const region of regions) {
+        elements.regionFilter.append(new Option(region, region));
+      }
+
+      for (const type of types) {
+        elements.typeFilter.append(new Option(type, type));
+      }
+
+      if (types.includes("恐袭")) {
+        elements.typeFilter.value = "恐袭";
+      }
+    }
+
+    function setDefaultDates(incidents) {
+      const dates = incidents.map((item) => item.date).sort();
+      elements.startDate.value = dates[0] ?? "";
+      elements.endDate.value = dates.at(-1) ?? "";
+    }
+
+    function bindEvents() {
+      document.querySelector("#filters").addEventListener("input", render);
+      window.addEventListener("resize", refreshMapLayout);
+      elements.resetButton.addEventListener("click", () => {
+        elements.regionFilter.value = "all";
+        elements.typeFilter.value = [...elements.typeFilter.options].some((option) => option.value === "恐袭")
+          ? "恐袭"
+          : "all";
+        elements.keywordFilter.value = "";
+        setDefaultDates(state.incidents);
+        state.selectedId = null;
+        render();
+      });
+    }
+
+    function getFilteredIncidents() {
+      const start = elements.startDate.value;
+      const end = elements.endDate.value;
+      const region = elements.regionFilter.value;
+      const type = elements.typeFilter.value;
+      const keyword = elements.keywordFilter.value.trim().toLowerCase();
+
+      return state.incidents.filter((incident) => {
+        const inDateRange = (!start || incident.date >= start) && (!end || incident.date <= end);
+        const inRegion = region === "all" || incident.region === region;
+        const inType = type === "all" || incident.incidentType === type;
+        const haystack = [
+          incident.title,
+          incident.city,
+          incident.region,
+          incident.actor,
+          incident.target,
+          incident.summary,
+        ]
+          .join(" ")
+          .toLowerCase();
+
+        return inDateRange && inRegion && inType && (!keyword || haystack.includes(keyword));
+      });
+    }
+
+    function render() {
+      const incidents = getFilteredIncidents();
+      renderStats(incidents);
+      renderList(incidents);
+      renderMarkers(incidents);
+
+      if (!incidents.some((item) => item.id === state.selectedId)) {
+        state.selectedId = incidents[0]?.id ?? null;
+      }
+
+      const selected = incidents.find((item) => item.id === state.selectedId);
+      renderDetail(selected);
+      highlightSelected();
+      refreshMapLayout();
+    }
+
+    function renderStats(incidents) {
+      const regions = new Set(incidents.map((item) => item.region));
+      const highSeverity = incidents.filter((item) => item.severity === "高").length;
+
+      elements.stats.innerHTML = [
+        statTemplate(incidents.length, "当前事件"),
+        statTemplate(regions.size, "涉及地区"),
+        statTemplate(highSeverity, "高风险"),
+      ].join("");
+    }
+
+    function statTemplate(value, label) {
+      return `<div class="stat"><strong>${value}</strong><span>${label}</span></div>`;
+    }
+
+    function renderList(incidents) {
+      if (incidents.length === 0) {
+        elements.incidentList.innerHTML = '<p class="empty">没有符合筛选条件的事件。</p>';
+        return;
+      }
+
+      elements.incidentList.innerHTML = incidents
+        .map(
+          (incident) => `
+            <button class="incident-card" data-id="${incident.id}" data-type="${incident.incidentType}">
+              <h2>${incident.title}</h2>
+              <div class="meta">
+                <span>${formatDate.format(new Date(`${incident.date}T00:00:00+05:00`))}</span>
+                <span>${incident.city} / ${incident.region}</span>
+              </div>
+              <div class="meta">
+                <span class="tag ${severityClass[incident.severity] ?? ""}">${incident.severity}风险</span>
+                <span class="tag">${incident.incidentType}</span>
+              </div>
+            </button>
+          `,
+        )
+        .join("");
+
+      elements.incidentList.querySelectorAll(".incident-card").forEach((card) => {
+        card.addEventListener("click", () => selectIncident(card.dataset.id));
+      });
+    }
+
+    function renderMarkers(incidents) {
+      markerLayer.clearLayers();
+      state.markers.clear();
+
+      const bounds = [];
+
+      for (const incident of incidents) {
+        const marker = L.circleMarker([incident.latitude, incident.longitude], {
+          radius: incident.severity === "高" ? 10 : 8,
+          color: incident.incidentType === "关联反恐行动" ? "#176f73" : "#8f2323",
+          fillColor: incident.incidentType === "关联反恐行动" ? "#1d8d91" : "#d04a3a",
+          fillOpacity: 0.82,
+          weight: 2,
+        })
+          .bindPopup(`<strong>${incident.title}</strong><br>${incident.city} / ${incident.region}`)
+          .on("click", () => selectIncident(incident.id));
+
+        marker.addTo(markerLayer);
+        state.markers.set(incident.id, marker);
+        bounds.push([incident.latitude, incident.longitude]);
+      }
+
+      if (bounds.length === 1) {
+        map.setView(bounds[0], 8);
+      } else if (bounds.length > 1) {
+        map.fitBounds(bounds, { padding: [42, 42] });
+      }
+
+      refreshMapLayout();
+    }
+
+    function selectIncident(id) {
+      state.selectedId = id;
+      const incident = state.incidents.find((item) => item.id === id);
+      renderDetail(incident);
+      highlightSelected();
+
+      const marker = state.markers.get(id);
+      if (incident) {
+        focusIncidentOnMap(incident, marker);
+      }
+    }
+
+    function refreshMapLayout() {
+      requestAnimationFrame(() => {
+        map.invalidateSize({ animate: false, pan: false });
+        requestAnimationFrame(() => map.invalidateSize({ animate: false, pan: false }));
+      });
+    }
+
+    function focusIncidentOnMap(incident, marker) {
+      const latLng = marker?.getLatLng() ?? L.latLng(incident.latitude, incident.longitude);
+      refreshMapLayout();
+      map.flyTo(latLng, Math.max(map.getZoom(), 9), {
+        animate: true,
+        duration: 0.55,
+      });
+
+      window.setTimeout(() => {
+        refreshMapLayout();
+        if (marker) {
+          marker.openPopup();
+        }
+      }, 620);
+    }
+
+    function highlightSelected() {
+      elements.incidentList.querySelectorAll(".incident-card").forEach((card) => {
+        card.classList.toggle("active", card.dataset.id === state.selectedId);
+      });
+    }
+
+    function renderDetail(incident) {
+      if (!incident) {
+        elements.detail.innerHTML = '<p class="empty">没有符合筛选条件的事件。</p>';
+        return;
+      }
+
+      const fatalityNote = incident.fatalities
+        ? `<div class="detail-cell"><span>伤亡</span><strong>${incident.fatalities.reportedMinimum}–${incident.fatalities.reportedMaximum} 人</strong><small style="display:block;color:var(--muted);margin-top:4px;">${incident.fatalities.note}</small></div>`
+        : "";
+
+      elements.detail.innerHTML = `
+        <div>
+          <div class="meta">
+            <span class="tag ${severityClass[incident.severity] ?? ""}">${incident.severity}风险</span>
+            <span class="tag">${incident.incidentType}</span>
+            <span class="tag">${incident.confidence}可信度</span>
+          </div>
+          <h2>${incident.title}</h2>
+        </div>
+        <div class="detail-grid">
+          ${detailCell("日期", incident.date)}
+          ${detailCell("地点", `${incident.city}, ${incident.region}`)}
+          ${fatalityNote}
+          ${detailCell("相关组织", incident.actor)}
+          ${detailCell("目标", incident.target)}
+        </div>
+        <p>${incident.summary}</p>
+        ${renderMedia(incident)}
+        <div class="sources">
+          ${incident.sources.map((source) => `<a href="${source.url}" target="_blank" rel="noreferrer">${source.name}</a>`).join("")}
+        </div>
+      `;
+    }
+
+    function renderMedia(incident) {
+      const media = incident.media ?? [];
+      const note = incident.mediaNote ? `<p class="media-note">${incident.mediaNote}</p>` : "";
+
+      if (media.length === 0) {
+        return `
+          <section class="media-section" aria-label="图片信源">
+            <h3>图片信源</h3>
+            ${note || '<p class="media-note">暂未发现可核验现场图片。</p>'}
+          </section>
+        `;
+      }
+
+      return `
+        <section class="media-section" aria-label="图片信源">
+          <h3>图片信源</h3>
+          <div class="media-grid">
+            ${media
+              .map(
+                (item) => `
+                  <figure class="media-card">
+                    <img src="${item.imageUrl}" alt="${item.caption}" loading="lazy" />
+                    <figcaption>
+                      <strong>${item.title}</strong>
+                      <span>${item.caption}</span>
+                      <small>${item.credit}</small>
+                      <a href="${item.sourceUrl}" target="_blank" rel="noreferrer">${item.sourceName}</a>
+                    </figcaption>
+                  </figure>
+                `,
+              )
+              .join("")}
+          </div>
+          ${note}
+        </section>
+      `;
+    }
+
+    function detailCell(label, value) {
+      return `<div class="detail-cell"><span>${label}</span><strong>${value}</strong></div>`;
+    }
+
+    init();
+  </script>
+</body>
+</html>
+
+
+===== open.html =====
+
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>涉恐开源情报的可视化呈现 - 以巴基斯坦恐袭案件为例</title>
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIINfQ7O67U8CmPlb5W7aJ0Mx0cwSHv95hk="
+    crossorigin=""
+  />
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #18202a;
+      --muted: #657282;
+      --line: #d9e0e8;
+      --panel: #f7f9fb;
+      --paper: #ffffff;
+      --accent: #b73535;
+      --accent-strong: #8f2323;
+      --teal: #176f73;
+      --amber: #b46a12;
+      --shadow: 0 16px 40px rgba(22, 32, 42, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    /* Local Leaflet fallback: keeps map tiles positioned and clipped even if CDN CSS fails. */
+    .leaflet-container {
+      position: relative;
+      overflow: hidden;
+      background: #dce5ed;
+      outline-offset: 1px;
+      font: 12px/1.5 "Helvetica Neue", Arial, Helvetica, sans-serif;
+    }
+
+    .leaflet-pane,
+    .leaflet-tile,
+    .leaflet-marker-icon,
+    .leaflet-marker-shadow,
+    .leaflet-tile-container,
+    .leaflet-pane > svg,
+    .leaflet-pane > canvas,
+    .leaflet-zoom-box,
+    .leaflet-image-layer,
+    .leaflet-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    .leaflet-tile,
+    .leaflet-marker-icon,
+    .leaflet-marker-shadow {
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .leaflet-tile {
+      width: 256px;
+      height: 256px;
+      max-width: none !important;
+      max-height: none !important;
+    }
+
+    .leaflet-map-pane {
+      z-index: 400;
+    }
+
+    .leaflet-tile-pane {
+      z-index: 200;
+    }
+
+    .leaflet-overlay-pane {
+      z-index: 400;
+    }
+
+    .leaflet-marker-pane {
+      z-index: 600;
+    }
+
+    .leaflet-tooltip-pane {
+      z-index: 650;
+    }
+
+    .leaflet-popup-pane {
+      z-index: 700;
+    }
+
+    .leaflet-control {
+      position: relative;
+      z-index: 800;
+      pointer-events: auto;
+    }
+
+    .leaflet-top,
+    .leaflet-bottom {
+      position: absolute;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    .leaflet-top {
+      top: 0;
+    }
+
+    .leaflet-right {
+      right: 0;
+    }
+
+    .leaflet-bottom {
+      bottom: 0;
+    }
+
+    .leaflet-left {
+      left: 0;
+    }
+
+    .leaflet-control {
+      float: left;
+      clear: both;
+      margin: 10px;
+    }
+
+    .leaflet-right .leaflet-control {
+      float: right;
+    }
+
+    .leaflet-control-zoom a {
+      display: block;
+      width: 28px;
+      height: 28px;
+      border-bottom: 1px solid #ccc;
+      background: #fff;
+      color: #222;
+      text-align: center;
+      text-decoration: none;
+      font: bold 18px/28px Arial, Helvetica, sans-serif;
+    }
+
+    .leaflet-control-zoom a:last-child {
+      border-bottom: 0;
+    }
+
+    .leaflet-control-attribution {
+      padding: 0 5px;
+      background: rgba(255, 255, 255, 0.8);
+    }
+
+    .leaflet-interactive {
+      cursor: pointer;
+    }
+
+    .leaflet-popup {
+      position: absolute;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .leaflet-popup-content-wrapper {
+      border-radius: 6px;
+      padding: 1px;
+      background: #fff;
+      box-shadow: 0 3px 14px rgba(0, 0, 0, 0.25);
+      text-align: left;
+    }
+
+    .leaflet-popup-content {
+      margin: 13px 19px;
+      line-height: 1.4;
+    }
+
+    .leaflet-popup-tip-container {
+      position: absolute;
+      left: 50%;
+      width: 40px;
+      height: 20px;
+      margin-left: -20px;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .leaflet-popup-tip {
+      width: 17px;
+      height: 17px;
+      margin: -10px auto 0;
+      transform: rotate(45deg);
+      background: #fff;
+      box-shadow: 0 3px 14px rgba(0, 0, 0, 0.25);
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      color: var(--ink);
+      background: #e9eef3;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    .app-shell {
+      height: 100vh;
+      padding: 18px;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(340px, 430px) minmax(0, 1fr);
+      height: calc(100vh - 36px);
+      min-height: 0;
+      overflow: hidden;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel {
+      display: flex;
+      min-height: 0;
+      overflow: hidden;
+      flex-direction: column;
+      gap: 18px;
+      padding: 22px;
+      border-right: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    .title-block {
+      display: grid;
+      gap: 8px;
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: var(--teal);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 26px;
+      line-height: 1.18;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .scope-note {
+      margin: 0;
+      border-left: 3px solid var(--teal);
+      padding-left: 10px;
+      color: #435262;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .filters label {
+      display: grid;
+      gap: 6px;
+      color: #334151;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .filters label:nth-last-of-type(1) {
+      grid-column: 1 / -1;
+    }
+
+    input,
+    select,
+    button {
+      min-height: 40px;
+      width: 100%;
+      border: 1px solid #c9d2dc;
+      border-radius: 6px;
+      padding: 8px 10px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .reset-button {
+      grid-column: 1 / -1;
+      border-color: var(--accent);
+      color: #fff;
+      background: var(--accent);
+      font-weight: 700;
+    }
+
+    .reset-button:hover {
+      background: var(--accent-strong);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .stat {
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 20px;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .incident-list {
+      display: grid;
+      min-height: 0;
+      gap: 10px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .incident-card {
+      display: grid;
+      gap: 8px;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--accent);
+      border-radius: 6px;
+      padding: 12px;
+      background: #fff;
+      text-align: left;
+    }
+
+    .incident-card[data-type="关联反恐行动"] {
+      border-left-color: var(--teal);
+    }
+
+    .incident-card:hover,
+    .incident-card.active {
+      border-color: #9fb0bf;
+      background: #fdf7f3;
+    }
+
+    .incident-card h2 {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.35;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      background: #eef2f5;
+      color: #374759;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .tag.high {
+      background: #ffe7e1;
+      color: var(--accent-strong);
+    }
+
+    .tag.medium {
+      background: #fff1d7;
+      color: var(--amber);
+    }
+
+    .map-area {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      background: #dce5ed;
+    }
+
+    .legend {
+      position: absolute;
+      z-index: 3;
+      top: 14px;
+      right: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      max-width: calc(100% - 28px);
+      border: 1px solid rgba(120, 138, 154, 0.45);
+      border-radius: 6px;
+      padding: 8px 10px;
+      background: rgba(255, 255, 255, 0.94);
+      color: #354455;
+      font-size: 12px;
+      font-weight: 700;
+      box-shadow: 0 8px 22px rgba(22, 32, 42, 0.12);
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+    }
+
+    .legend-dot.attack {
+      background: #d04a3a;
+      border: 2px solid #8f2323;
+    }
+
+    .legend-dot.response {
+      background: #1d8d91;
+      border: 2px solid #176f73;
+    }
+
+    .map {
+      position: relative;
+      z-index: 1;
+      flex: 1 1 auto;
+      min-width: 0;
+      min-height: 0;
+      width: 100%;
+    }
+
+    .detail {
+      position: relative;
+      z-index: 2;
+      flex: 0 0 auto;
+      display: grid;
+      gap: 10px;
+      min-height: 180px;
+      max-height: 32vh;
+      overflow: auto;
+      padding: 18px 22px;
+      border-top: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.96);
+    }
+
+    .detail h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .detail p {
+      margin: 0;
+      color: #344353;
+      line-height: 1.6;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .detail-cell {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+      background: #fbfcfd;
+    }
+
+    .detail-cell span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .detail-cell strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 14px;
+    }
+
+    .media-section {
+      display: grid;
+      gap: 10px;
+    }
+
+    .media-section h3 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .media-card {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fbfcfd;
+    }
+
+    .media-card img {
+      display: block;
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      background: #dce5ed;
+    }
+
+    .media-card figcaption {
+      display: grid;
+      gap: 4px;
+      padding: 10px;
+      color: #3b4a5a;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .media-card figcaption strong {
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    .media-card figcaption small,
+    .media-note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .media-card a {
+      color: var(--teal);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .media-card a:hover {
+      text-decoration: underline;
+    }
+
+    .sources {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .sources a {
+      color: var(--teal);
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .sources a:hover {
+      text-decoration: underline;
+    }
+
+    .empty {
+      align-self: center;
+      color: var(--muted);
+    }
+
+    .leaflet-popup-content {
+      min-width: 220px;
+    }
+
+    @media (max-width: 920px) {
+      .app-shell {
+        padding: 0;
+      }
+
+      .workspace {
+        grid-template-columns: 1fr;
+        height: auto;
+        min-height: 100vh;
+        border: 0;
+        border-radius: 0;
+      }
+
+      .panel {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .map {
+        height: 56vh;
+        min-height: 420px;
+      }
+
+      .detail-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .media-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 540px) {
+      .filters,
+      .stats,
+      .detail-grid {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <section class="workspace">
+      <aside class="panel" aria-label="筛选与事件列表">
+        <div class="title-block">
+          <p class="eyebrow">Pakistan OSINT Watch</p>
+          <h1>涉恐开源情报可视化</h1>
+          <p class="subtitle">过去一周公开报道事件，支持时间、地区、类型筛选与地图交互。</p>
+          <p class="scope-note">数据窗口：2026-06-23 至 2026-06-30；默认显示已核验恐袭案件。</p>
+        </div>
+
+        <form class="filters" id="filters">
+          <label>
+            起始日期
+            <input id="startDate" type="date" />
+          </label>
+          <label>
+            结束日期
+            <input id="endDate" type="date" />
+          </label>
+          <label>
+            地区
+            <select id="regionFilter">
+              <option value="all">全部地区</option>
+            </select>
+          </label>
+          <label>
+            事件类型
+            <select id="typeFilter">
+              <option value="all">全部类型</option>
+            </select>
+          </label>
+          <label>
+            关键词
+            <input id="keywordFilter" type="search" placeholder="城市、组织、目标..." />
+          </label>
+          <button class="reset-button" type="button" id="resetButton">重置</button>
+        </form>
+
+        <div class="stats" id="stats" aria-live="polite"></div>
+        <div class="incident-list" id="incidentList" aria-label="事件卡片"></div>
+      </aside>
+
+      <section class="map-area" aria-label="交互地图和事件详情">
+        <div id="map" class="map"></div>
+        <div class="legend" aria-label="地图图例">
+          <span><i class="legend-dot attack"></i>恐袭</span>
+          <span><i class="legend-dot response"></i>关联反恐行动</span>
+        </div>
+        <article class="detail" id="detail">
+          <p class="empty">点击地图标记或左侧事件卡片查看详情。</p>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script>
+    /* ===== 内嵌事件数据（来自 data/incidents.json） ===== */
+    const EMBEDDED_INCIDENTS = [
+      {
+        "id": "pk-2026-06-27-karachi-rangers-hq",
+        "date": "2026-06-27",
+        "country": "Pakistan",
+        "region": "Sindh",
+        "city": "Karachi",
+        "latitude": 24.9206,
+        "longitude": 67.1167,
+        "title": "卡拉奇 Sindh Rangers 总部遭爆炸物车辆袭击",
+        "incidentType": "恐袭",
+        "severity": "高",
+        "confidence": "高",
+        "actor": "Jamaat-ul-Ahrar reportedly claimed responsibility",
+        "target": "Pakistan Rangers provincial headquarters",
+        "fatalities": {
+          "reportedMinimum": 6,
+          "reportedMaximum": 10,
+          "note": "AP 报道至少 3 名准军事人员和 3 名袭击者死亡；其他媒体对安全人员和袭击者数字存在差异。"
+        },
+        "summary": "公开报道显示，2026-06-27 一名武装人员驾驶装载爆炸物的车辆冲撞位于卡拉奇 Gulistan-e-Jauhar 一带的 Pakistan Rangers 省级总部，随后发生交火。该事件被报道为近期巴基斯坦针对安全力量袭击上升的一部分。",
+        "sources": [
+          { "name": "Associated Press", "url": "https://apnews.com/article/c587c48d9bceba758ede65b34bea75cd" },
+          { "name": "Economic Times / PTI", "url": "https://m.economictimes.com/news/international/world-news/pakistans-karachi-rocked-by-explosion-gunfire-reported/articleshow/132039519.cms" }
+        ],
+        "media": [],
+        "mediaNote": "已核验来源中，AP 正文未提供可用现场图片；Economic Times 页面图片标注为 AI generated image for representation，因此未作为现场信源图片展示。",
+        "lastReviewed": "2026-06-30"
+      },
+      {
+        "id": "pk-2026-06-29-afghan-border-operation",
+        "date": "2026-06-29",
+        "country": "Pakistan",
+        "region": "Khyber Pakhtunkhwa / Afghan border",
+        "city": "Border area",
+        "latitude": 33.7645,
+        "longitude": 70.5146,
+        "title": "巴阿边境涉恐目标地面行动及空袭报道",
+        "incidentType": "关联反恐行动",
+        "severity": "中",
+        "confidence": "中",
+        "actor": "Pakistani security forces; alleged TTP-linked targets",
+        "target": "Reported militant hideouts along the Pakistan-Afghanistan border",
+        "fatalities": {
+          "reportedMinimum": 29,
+          "reportedMaximum": 29,
+          "note": "AP 引述巴基斯坦方面称 29 名武装分子死亡；Guardian 引述阿富汗方面称跨境空袭造成平民伤亡。"
+        },
+        "summary": "在卡拉奇袭击后，巴基斯坦方面称其在巴阿边境针对 TTP 相关目标实施地面行动和空袭。该条目作为涉恐关联事件纳入地图，便于展示恐袭后的安全响应链条，但不应与在巴基斯坦境内发生的恐袭案件混同。",
+        "sources": [
+          { "name": "Associated Press", "url": "https://apnews.com/article/fab8de4e4e82590da5a259587e0b84ff" },
+          { "name": "The Guardian", "url": "https://www.theguardian.com/world/2026/jun/29/pakistan-deadly-airstrikes-afghanistan-border" }
+        ],
+        "media": [
+          {
+            "title": "Chamkani district airstrike aftermath",
+            "imageUrl": "https://i.guim.co.uk/img/media/1e898d19b651fc4b4dbddfa7038b4572fb387bf1/837_1_4915_3932/master/4915.jpg?crop=none&dpr=1&s=none&width=465",
+            "caption": "Paktia province Chamkani district airstrike aftermath, showing a ruined multi-storey building.",
+            "credit": "Saifullah Zahir/AP, via The Guardian",
+            "sourceName": "The Guardian / AP",
+            "sourceUrl": "https://www.theguardian.com/world/2026/jun/29/pakistan-deadly-airstrikes-afghanistan-border",
+            "verificationNote": "Guardian 图注说明为 Chamkani district, Paktia province 空袭后建筑损毁现场。"
+          },
+          {
+            "title": "Debris at the Chamkani airstrike scene",
+            "imageUrl": "https://i.guim.co.uk/img/media/b5e734b1d6277915af802f2a6b1cb40bb93e103a/842_0_5000_4000/master/5000.jpg?crop=none&dpr=1&s=none&width=445",
+            "caption": "Debris and rubble at the scene of the airstrikes in Chamkani district.",
+            "credit": "Saifullah Zahir/AP, via The Guardian",
+            "sourceName": "The Guardian / AP",
+            "sourceUrl": "https://www.theguardian.com/world/2026/jun/29/pakistan-deadly-airstrikes-afghanistan-border",
+            "verificationNote": "Guardian 图注说明为 Chamkani district 空袭现场瓦砾与碎片。"
+          }
+        ],
+        "mediaNote": "该条为恐袭后的关联反恐行动，图片来自 Guardian 页面中带 AP 摄影署名的现场图注。",
+        "lastReviewed": "2026-06-30"
+      }
+    ];
+
+    /* ===== 应用逻辑 ===== */
+    const state = {
+      incidents: EMBEDDED_INCIDENTS,
+      markers: new Map(),
+      selectedId: null,
+    };
+
+    const map = L.map("map", {
+      zoomControl: true,
+      scrollWheelZoom: true,
+    }).setView([30.3753, 69.3451], 5);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(map);
+
+    const markerLayer = L.layerGroup().addTo(map);
+
+    const elements = {
+      startDate: document.querySelector("#startDate"),
+      endDate: document.querySelector("#endDate"),
+      regionFilter: document.querySelector("#regionFilter"),
+      typeFilter: document.querySelector("#typeFilter"),
+      keywordFilter: document.querySelector("#keywordFilter"),
+      resetButton: document.querySelector("#resetButton"),
+      incidentList: document.querySelector("#incidentList"),
+      detail: document.querySelector("#detail"),
+      stats: document.querySelector("#stats"),
+    };
+
+    const formatDate = new Intl.DateTimeFormat("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+
+    const severityClass = {
+      高: "high",
+      中: "medium",
+      低: "low",
+    };
+
+    function init() {
+      populateControls(state.incidents);
+      setDefaultDates(state.incidents);
+      bindEvents();
+      render();
+      refreshMapLayout();
+    }
+
+    function populateControls(incidents) {
+      const regions = [...new Set(incidents.map((item) => item.region))].sort();
+      const types = [...new Set(incidents.map((item) => item.incidentType))].sort();
+
+      for (const region of regions) {
+        elements.regionFilter.append(new Option(region, region));
+      }
+
+      for (const type of types) {
+        elements.typeFilter.append(new Option(type, type));
+      }
+
+      if (types.includes("恐袭")) {
+        elements.typeFilter.value = "恐袭";
+      }
+    }
+
+    function setDefaultDates(incidents) {
+      const dates = incidents.map((item) => item.date).sort();
+      elements.startDate.value = dates[0] ?? "";
+      elements.endDate.value = dates.at(-1) ?? "";
+    }
+
+    function bindEvents() {
+      document.querySelector("#filters").addEventListener("input", render);
+      window.addEventListener("resize", refreshMapLayout);
+      elements.resetButton.addEventListener("click", () => {
+        elements.regionFilter.value = "all";
+        elements.typeFilter.value = [...elements.typeFilter.options].some((option) => option.value === "恐袭")
+          ? "恐袭"
+          : "all";
+        elements.keywordFilter.value = "";
+        setDefaultDates(state.incidents);
+        state.selectedId = null;
+        render();
+      });
+    }
+
+    function getFilteredIncidents() {
+      const start = elements.startDate.value;
+      const end = elements.endDate.value;
+      const region = elements.regionFilter.value;
+      const type = elements.typeFilter.value;
+      const keyword = elements.keywordFilter.value.trim().toLowerCase();
+
+      return state.incidents.filter((incident) => {
+        const inDateRange = (!start || incident.date >= start) && (!end || incident.date <= end);
+        const inRegion = region === "all" || incident.region === region;
+        const inType = type === "all" || incident.incidentType === type;
+        const haystack = [
+          incident.title,
+          incident.city,
+          incident.region,
+          incident.actor,
+          incident.target,
+          incident.summary,
+        ]
+          .join(" ")
+          .toLowerCase();
+
+        return inDateRange && inRegion && inType && (!keyword || haystack.includes(keyword));
+      });
+    }
+
+    function render() {
+      const incidents = getFilteredIncidents();
+      renderStats(incidents);
+      renderList(incidents);
+      renderMarkers(incidents);
+
+      if (!incidents.some((item) => item.id === state.selectedId)) {
+        state.selectedId = incidents[0]?.id ?? null;
+      }
+
+      const selected = incidents.find((item) => item.id === state.selectedId);
+      renderDetail(selected);
+      highlightSelected();
+      refreshMapLayout();
+    }
+
+    function renderStats(incidents) {
+      const regions = new Set(incidents.map((item) => item.region));
+      const highSeverity = incidents.filter((item) => item.severity === "高").length;
+
+      elements.stats.innerHTML = [
+        statTemplate(incidents.length, "当前事件"),
+        statTemplate(regions.size, "涉及地区"),
+        statTemplate(highSeverity, "高风险"),
+      ].join("");
+    }
+
+    function statTemplate(value, label) {
+      return `<div class="stat"><strong>${value}</strong><span>${label}</span></div>`;
+    }
+
+    function renderList(incidents) {
+      if (incidents.length === 0) {
+        elements.incidentList.innerHTML = '<p class="empty">没有符合筛选条件的事件。</p>';
+        return;
+      }
+
+      elements.incidentList.innerHTML = incidents
+        .map(
+          (incident) => `
+            <button class="incident-card" data-id="${incident.id}" data-type="${incident.incidentType}">
+              <h2>${incident.title}</h2>
+              <div class="meta">
+                <span>${formatDate.format(new Date(`${incident.date}T00:00:00+05:00`))}</span>
+                <span>${incident.city} / ${incident.region}</span>
+              </div>
+              <div class="meta">
+                <span class="tag ${severityClass[incident.severity] ?? ""}">${incident.severity}风险</span>
+                <span class="tag">${incident.incidentType}</span>
+              </div>
+            </button>
+          `,
+        )
+        .join("");
+
+      elements.incidentList.querySelectorAll(".incident-card").forEach((card) => {
+        card.addEventListener("click", () => selectIncident(card.dataset.id));
+      });
+    }
+
+    function renderMarkers(incidents) {
+      markerLayer.clearLayers();
+      state.markers.clear();
+
+      const bounds = [];
+
+      for (const incident of incidents) {
+        const marker = L.circleMarker([incident.latitude, incident.longitude], {
+          radius: incident.severity === "高" ? 10 : 8,
+          color: incident.incidentType === "关联反恐行动" ? "#176f73" : "#8f2323",
+          fillColor: incident.incidentType === "关联反恐行动" ? "#1d8d91" : "#d04a3a",
+          fillOpacity: 0.82,
+          weight: 2,
+        })
+          .bindPopup(`<strong>${incident.title}</strong><br>${incident.city} / ${incident.region}`)
+          .on("click", () => selectIncident(incident.id));
+
+        marker.addTo(markerLayer);
+        state.markers.set(incident.id, marker);
+        bounds.push([incident.latitude, incident.longitude]);
+      }
+
+      if (bounds.length === 1) {
+        map.setView(bounds[0], 8);
+      } else if (bounds.length > 1) {
+        map.fitBounds(bounds, { padding: [42, 42] });
+      }
+
+      refreshMapLayout();
+    }
+
+    function selectIncident(id) {
+      state.selectedId = id;
+      const incident = state.incidents.find((item) => item.id === id);
+      renderDetail(incident);
+      highlightSelected();
+
+      const marker = state.markers.get(id);
+      if (incident) {
+        focusIncidentOnMap(incident, marker);
+      }
+    }
+
+    function refreshMapLayout() {
+      requestAnimationFrame(() => {
+        map.invalidateSize({ animate: false, pan: false });
+        requestAnimationFrame(() => map.invalidateSize({ animate: false, pan: false }));
+      });
+    }
+
+    function focusIncidentOnMap(incident, marker) {
+      const latLng = marker?.getLatLng() ?? L.latLng(incident.latitude, incident.longitude);
+      refreshMapLayout();
+      map.flyTo(latLng, Math.max(map.getZoom(), 9), {
+        animate: true,
+        duration: 0.55,
+      });
+
+      window.setTimeout(() => {
+        refreshMapLayout();
+        if (marker) {
+          marker.openPopup();
+        }
+      }, 620);
+    }
+
+    function highlightSelected() {
+      elements.incidentList.querySelectorAll(".incident-card").forEach((card) => {
+        card.classList.toggle("active", card.dataset.id === state.selectedId);
+      });
+    }
+
+    function renderDetail(incident) {
+      if (!incident) {
+        elements.detail.innerHTML = '<p class="empty">没有符合筛选条件的事件。</p>';
+        return;
+      }
+
+      const fatalityNote = incident.fatalities
+        ? `<div class="detail-cell"><span>伤亡</span><strong>${incident.fatalities.reportedMinimum}–${incident.fatalities.reportedMaximum} 人</strong><small style="display:block;color:var(--muted);margin-top:4px;">${incident.fatalities.note}</small></div>`
+        : "";
+
+      elements.detail.innerHTML = `
+        <div>
+          <div class="meta">
+            <span class="tag ${severityClass[incident.severity] ?? ""}">${incident.severity}风险</span>
+            <span class="tag">${incident.incidentType}</span>
+            <span class="tag">${incident.confidence}可信度</span>
+          </div>
+          <h2>${incident.title}</h2>
+        </div>
+        <div class="detail-grid">
+          ${detailCell("日期", incident.date)}
+          ${detailCell("地点", `${incident.city}, ${incident.region}`)}
+          ${fatalityNote}
+          ${detailCell("相关组织", incident.actor)}
+          ${detailCell("目标", incident.target)}
+        </div>
+        <p>${incident.summary}</p>
+        ${renderMedia(incident)}
+        <div class="sources">
+          ${incident.sources.map((source) => `<a href="${source.url}" target="_blank" rel="noreferrer">${source.name}</a>`).join("")}
+        </div>
+      `;
+    }
+
+    function renderMedia(incident) {
+      const media = incident.media ?? [];
+      const note = incident.mediaNote ? `<p class="media-note">${incident.mediaNote}</p>` : "";
+
+      if (media.length === 0) {
+        return `
+          <section class="media-section" aria-label="图片信源">
+            <h3>图片信源</h3>
+            ${note || '<p class="media-note">暂未发现可核验现场图片。</p>'}
+          </section>
+        `;
+      }
+
+      return `
+        <section class="media-section" aria-label="图片信源">
+          <h3>图片信源</h3>
+          <div class="media-grid">
+            ${media
+              .map(
+                (item) => `
+                  <figure class="media-card">
+                    <img src="${item.imageUrl}" alt="${item.caption}" loading="lazy" />
+                    <figcaption>
+                      <strong>${item.title}</strong>
+                      <span>${item.caption}</span>
+                      <small>${item.credit}</small>
+                      <a href="${item.sourceUrl}" target="_blank" rel="noreferrer">${item.sourceName}</a>
+                    </figcaption>
+                  </figure>
+                `,
+              )
+              .join("")}
+          </div>
+          ${note}
+        </section>
+      `;
+    }
+
+    function detailCell(label, value) {
+      return `<div class="detail-cell"><span>${label}</span><strong>${value}</strong></div>`;
+    }
+
+    init();
+  </script>
+</body>
+</html>
+
+
+===== src/app.js =====
+
+const state = {
+  incidents: [],
+  dataMeta: null,
+  markers: new Map(),
+  selectedId: null,
+};
+
+const map = L.map("map", {
+  zoomControl: true,
+  scrollWheelZoom: true,
+}).setView([30.3753, 69.3451], 5);
+
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 18,
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+}).addTo(map);
+
+const markerLayer = L.layerGroup().addTo(map);
+
+const elements = {
+  startDate: document.querySelector("#startDate"),
+  endDate: document.querySelector("#endDate"),
+  regionFilter: document.querySelector("#regionFilter"),
+  typeFilter: document.querySelector("#typeFilter"),
+  keywordFilter: document.querySelector("#keywordFilter"),
+  resetButton: document.querySelector("#resetButton"),
+  incidentList: document.querySelector("#incidentList"),
+  detail: document.querySelector("#detail"),
+  stats: document.querySelector("#stats"),
+  dataStatus: document.querySelector("#dataStatus"),
+};
+
+const formatDate = new Intl.DateTimeFormat("zh-CN", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+const severityClass = {
+  高: "high",
+  中: "medium",
+  低: "low",
+};
+
+async function init() {
+  const dataset = await loadIncidentData();
+  state.incidents = dataset.incidents;
+  state.dataMeta = dataset.metadata;
+  populateControls(state.incidents);
+  setDefaultDates(state.incidents);
+  bindEvents();
+  renderDataStatus();
+  render();
+  refreshMapLayout();
+}
+
+async function loadIncidentData() {
+  const sources = [
+    { url: "./data/live-incidents.json", mode: "online" },
+    { url: "./data/incidents.json", mode: "manual" },
+  ];
+
+  for (const source of sources) {
+    try {
+      const response = await fetch(source.url, { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error(`${response.status} ${response.statusText}`);
+      }
+      const payload = await response.json();
+      return normalizeIncidentPayload(payload, source.mode);
+    } catch (error) {
+      console.warn(`Failed to load ${source.url}:`, error);
+    }
+  }
+
+  throw new Error("未能读取任何事件数据。");
+}
+
+function normalizeIncidentPayload(payload, mode) {
+  if (Array.isArray(payload)) {
+    return {
+      incidents: payload,
+      metadata: {
+        mode,
+        generatedAt: null,
+        caveat: "当前读取人工核验数据。",
+      },
+    };
+  }
+
+  if (Array.isArray(payload.incidents)) {
+    return {
+      incidents: payload.incidents,
+      metadata: {
+        mode,
+        ...(payload.metadata ?? {}),
+      },
+    };
+  }
+
+  throw new Error("事件数据格式不正确。");
+}
+
+function populateControls(incidents) {
+  const regions = [...new Set(incidents.map((item) => item.region))].sort();
+  const types = [...new Set(incidents.map((item) => item.incidentType))].sort();
+
+  for (const region of regions) {
+    elements.regionFilter.append(new Option(region, region));
+  }
+
+  for (const type of types) {
+    elements.typeFilter.append(new Option(type, type));
+  }
+
+  if (types.includes("恐袭")) {
+    elements.typeFilter.value = "恐袭";
+  }
+}
+
+function setDefaultDates(incidents) {
+  const dates = incidents.map((item) => item.date).sort();
+  elements.startDate.value = dates[0] ?? "";
+  elements.endDate.value = dates.at(-1) ?? "";
+}
+
+function bindEvents() {
+  document.querySelector("#filters").addEventListener("input", render);
+  window.addEventListener("resize", refreshMapLayout);
+  elements.resetButton.addEventListener("click", () => {
+    elements.regionFilter.value = "all";
+    elements.typeFilter.value = [...elements.typeFilter.options].some((option) => option.value === "恐袭")
+      ? "恐袭"
+      : "all";
+    elements.keywordFilter.value = "";
+    setDefaultDates(state.incidents);
+    state.selectedId = null;
+    render();
+  });
+}
+
+function getFilteredIncidents() {
+  const start = elements.startDate.value;
+  const end = elements.endDate.value;
+  const region = elements.regionFilter.value;
+  const type = elements.typeFilter.value;
+  const keyword = elements.keywordFilter.value.trim().toLowerCase();
+
+  return state.incidents.filter((incident) => {
+    const inDateRange = (!start || incident.date >= start) && (!end || incident.date <= end);
+    const inRegion = region === "all" || incident.region === region;
+    const inType = type === "all" || incident.incidentType === type;
+    const haystack = [
+      incident.title,
+      incident.city,
+      incident.region,
+      incident.actor,
+      incident.target,
+      incident.summary,
+    ]
+      .join(" ")
+      .toLowerCase();
+
+    return inDateRange && inRegion && inType && (!keyword || haystack.includes(keyword));
+  });
+}
+
+function render() {
+  const incidents = getFilteredIncidents();
+  renderStats(incidents);
+  renderList(incidents);
+  renderMarkers(incidents);
+
+  if (!incidents.some((item) => item.id === state.selectedId)) {
+    state.selectedId = incidents[0]?.id ?? null;
+  }
+
+  const selected = incidents.find((item) => item.id === state.selectedId);
+  renderDetail(selected);
+  highlightSelected();
+  refreshMapLayout();
+}
+
+function renderDataStatus() {
+  if (!elements.dataStatus) {
+    return;
+  }
+
+  const meta = state.dataMeta ?? {};
+  const generatedAt = meta.generatedAt ? new Date(meta.generatedAt) : null;
+  const generatedText = generatedAt && !Number.isNaN(generatedAt.valueOf())
+    ? `${generatedAt.toLocaleString("zh-CN")} 更新`
+    : "人工数据";
+  const candidateText = Number.isFinite(meta.autoCandidateCount)
+    ? `自动候选 ${meta.autoCandidateCount} 条`
+    : "无自动候选统计";
+
+  elements.dataStatus.textContent = `${generatedText}；${candidateText}。自动候选需人工复核。`;
+}
+
+function renderStats(incidents) {
+  const regions = new Set(incidents.map((item) => item.region));
+  const highSeverity = incidents.filter((item) => item.severity === "高").length;
+  const autoCandidates = incidents.filter((item) => item.reviewStatus === "auto-candidate").length;
+
+  const stats = [
+    statTemplate(incidents.length, "当前事件"),
+    statTemplate(regions.size, "涉及地区"),
+    statTemplate(highSeverity, "高风险"),
+  ];
+
+  if (autoCandidates > 0) {
+    stats.push(statTemplate(autoCandidates, "自动候选"));
+  }
+
+  elements.stats.innerHTML = stats.join("");
+}
+
+function statTemplate(value, label) {
+  return `<div class="stat"><strong>${value}</strong><span>${label}</span></div>`;
+}
+
+function renderList(incidents) {
+  if (incidents.length === 0) {
+    elements.incidentList.innerHTML = '<p class="empty">没有符合筛选条件的事件。</p>';
+    return;
+  }
+
+  elements.incidentList.innerHTML = incidents
+    .map(
+      (incident) => `
+        <button class="incident-card" data-id="${incident.id}" data-type="${incident.incidentType}">
+          <h2>${incident.title}</h2>
+          <div class="meta">
+            <span>${formatDate.format(new Date(`${incident.date}T00:00:00+05:00`))}</span>
+            <span>${incident.city} / ${incident.region}</span>
+          </div>
+          <div class="meta">
+            <span class="tag ${severityClass[incident.severity] ?? ""}">${incident.severity}风险</span>
+            <span class="tag">${incident.incidentType}</span>
+            ${incident.reviewStatus === "auto-candidate" ? '<span class="tag candidate">待核验</span>' : ""}
+          </div>
+        </button>
+      `,
+    )
+    .join("");
+
+  elements.incidentList.querySelectorAll(".incident-card").forEach((card) => {
+    card.addEventListener("click", () => selectIncident(card.dataset.id));
+  });
+}
+
+function renderMarkers(incidents) {
+  markerLayer.clearLayers();
+  state.markers.clear();
+
+  const bounds = [];
+
+  for (const incident of incidents) {
+    const marker = L.circleMarker([incident.latitude, incident.longitude], {
+      radius: incident.severity === "高" ? 10 : 8,
+      color: incident.incidentType === "关联反恐行动" ? "#176f73" : "#8f2323",
+      fillColor: incident.incidentType === "关联反恐行动" ? "#1d8d91" : "#d04a3a",
+      fillOpacity: 0.82,
+      weight: 2,
+    })
+      .bindPopup(`<strong>${incident.title}</strong><br>${incident.city} / ${incident.region}`)
+      .on("click", () => selectIncident(incident.id));
+
+    marker.addTo(markerLayer);
+    state.markers.set(incident.id, marker);
+    bounds.push([incident.latitude, incident.longitude]);
+  }
+
+  if (bounds.length === 1) {
+    map.setView(bounds[0], 8);
+  } else if (bounds.length > 1) {
+    map.fitBounds(bounds, { padding: [42, 42] });
+  }
+
+  refreshMapLayout();
+}
+
+function selectIncident(id) {
+  state.selectedId = id;
+  const incident = state.incidents.find((item) => item.id === id);
+  renderDetail(incident);
+  highlightSelected();
+
+  const marker = state.markers.get(id);
+  if (incident) {
+    focusIncidentOnMap(incident, marker);
+  }
+}
+
+function refreshMapLayout() {
+  requestAnimationFrame(() => {
+    map.invalidateSize({ animate: false, pan: false });
+    requestAnimationFrame(() => map.invalidateSize({ animate: false, pan: false }));
+  });
+}
+
+function focusIncidentOnMap(incident, marker) {
+  const latLng = marker?.getLatLng() ?? L.latLng(incident.latitude, incident.longitude);
+  refreshMapLayout();
+  map.flyTo(latLng, Math.max(map.getZoom(), 9), {
+    animate: true,
+    duration: 0.55,
+  });
+
+  window.setTimeout(() => {
+    refreshMapLayout();
+    if (marker) {
+      marker.openPopup();
+    }
+  }, 620);
+}
+
+function highlightSelected() {
+  elements.incidentList.querySelectorAll(".incident-card").forEach((card) => {
+    card.classList.toggle("active", card.dataset.id === state.selectedId);
+  });
+}
+
+function renderDetail(incident) {
+  if (!incident) {
+    elements.detail.innerHTML = '<p class="empty">没有符合筛选条件的事件。</p>';
+    return;
+  }
+
+  elements.detail.innerHTML = `
+    <div>
+      <div class="meta">
+        <span class="tag ${severityClass[incident.severity] ?? ""}">${incident.severity}风险</span>
+        <span class="tag">${incident.incidentType}</span>
+        <span class="tag">${incident.confidence}可信度</span>
+        ${incident.reviewStatus === "auto-candidate" ? '<span class="tag candidate">自动候选，未人工核验</span>' : ""}
+      </div>
+      <h2>${incident.title}</h2>
+    </div>
+    <div class="detail-grid">
+      ${detailCell("日期", incident.date)}
+      ${detailCell("地点", `${incident.city}, ${incident.region}`)}
+      ${detailCell("相关组织", incident.actor)}
+      ${detailCell("目标", incident.target)}
+    </div>
+    <p>${incident.summary}</p>
+    ${renderMedia(incident)}
+    <div class="sources">
+      ${incident.sources.map((source) => `<a href="${source.url}" target="_blank" rel="noreferrer">${source.name}</a>`).join("")}
+    </div>
+  `;
+}
+
+function renderMedia(incident) {
+  const media = incident.media ?? [];
+  const note = incident.mediaNote ? `<p class="media-note">${incident.mediaNote}</p>` : "";
+
+  if (media.length === 0) {
+    return `
+      <section class="media-section" aria-label="图片信源">
+        <h3>图片信源</h3>
+        ${note || '<p class="media-note">暂未发现可核验现场图片。</p>'}
+      </section>
+    `;
+  }
+
+  return `
+    <section class="media-section" aria-label="图片信源">
+      <h3>图片信源</h3>
+      <div class="media-grid">
+        ${media
+          .map(
+            (item) => `
+              <figure class="media-card">
+                <img src="${item.imageUrl}" alt="${item.caption}" loading="lazy" />
+                <figcaption>
+                  <strong>${item.title}</strong>
+                  <span>${item.caption}</span>
+                  <small>${item.credit}</small>
+                  <a href="${item.sourceUrl}" target="_blank" rel="noreferrer">${item.sourceName}</a>
+                </figcaption>
+              </figure>
+            `,
+          )
+          .join("")}
+      </div>
+      ${note}
+    </section>
+  `;
+}
+
+function detailCell(label, value) {
+  return `<div class="detail-cell"><span>${label}</span><strong>${value}</strong></div>`;
+}
+
+init().catch((error) => {
+  elements.detail.innerHTML = `<p class="empty">数据加载失败：${error.message}</p>`;
+});
+
+
+===== src/styles.css =====
+
+:root {
+  color-scheme: light;
+  --ink: #18202a;
+  --muted: #657282;
+  --line: #d9e0e8;
+  --panel: #f7f9fb;
+  --paper: #ffffff;
+  --accent: #b73535;
+  --accent-strong: #8f2323;
+  --teal: #176f73;
+  --amber: #b46a12;
+  --shadow: 0 16px 40px rgba(22, 32, 42, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Local Leaflet fallback: keeps map tiles positioned and clipped even if CDN CSS fails. */
+.leaflet-container {
+  position: relative;
+  overflow: hidden;
+  background: #dce5ed;
+  outline-offset: 1px;
+  font: 12px/1.5 "Helvetica Neue", Arial, Helvetica, sans-serif;
+}
+
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow,
+.leaflet-tile-container,
+.leaflet-pane > svg,
+.leaflet-pane > canvas,
+.leaflet-zoom-box,
+.leaflet-image-layer,
+.leaflet-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-marker-shadow {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.leaflet-tile {
+  width: 256px;
+  height: 256px;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+.leaflet-map-pane {
+  z-index: 400;
+}
+
+.leaflet-tile-pane {
+  z-index: 200;
+}
+
+.leaflet-overlay-pane {
+  z-index: 400;
+}
+
+.leaflet-marker-pane {
+  z-index: 600;
+}
+
+.leaflet-tooltip-pane {
+  z-index: 650;
+}
+
+.leaflet-popup-pane {
+  z-index: 700;
+}
+
+.leaflet-control {
+  position: relative;
+  z-index: 800;
+  pointer-events: auto;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  position: absolute;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.leaflet-top {
+  top: 0;
+}
+
+.leaflet-right {
+  right: 0;
+}
+
+.leaflet-bottom {
+  bottom: 0;
+}
+
+.leaflet-left {
+  left: 0;
+}
+
+.leaflet-control {
+  float: left;
+  clear: both;
+  margin: 10px;
+}
+
+.leaflet-right .leaflet-control {
+  float: right;
+}
+
+.leaflet-control-zoom a {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-bottom: 1px solid #ccc;
+  background: #fff;
+  color: #222;
+  text-align: center;
+  text-decoration: none;
+  font: bold 18px/28px Arial, Helvetica, sans-serif;
+}
+
+.leaflet-control-zoom a:last-child {
+  border-bottom: 0;
+}
+
+.leaflet-control-attribution {
+  padding: 0 5px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.leaflet-interactive {
+  cursor: pointer;
+}
+
+.leaflet-popup {
+  position: absolute;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 6px;
+  padding: 1px;
+  background: #fff;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.25);
+  text-align: left;
+}
+
+.leaflet-popup-content {
+  margin: 13px 19px;
+  line-height: 1.4;
+}
+
+.leaflet-popup-tip-container {
+  position: absolute;
+  left: 50%;
+  width: 40px;
+  height: 20px;
+  margin-left: -20px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.leaflet-popup-tip {
+  width: 17px;
+  height: 17px;
+  margin: -10px auto 0;
+  transform: rotate(45deg);
+  background: #fff;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.25);
+}
+
+body {
+  margin: 0;
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  color: var(--ink);
+  background: #e9eef3;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+.app-shell {
+  height: 100vh;
+  padding: 18px;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(340px, 430px) minmax(0, 1fr);
+  height: calc(100vh - 36px);
+  min-height: 0;
+  overflow: hidden;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.panel {
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px;
+  border-right: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.title-block {
+  display: grid;
+  gap: 8px;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.18;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.scope-note {
+  margin: 0;
+  border-left: 3px solid var(--teal);
+  padding-left: 10px;
+  color: #435262;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.data-status {
+  margin: 0;
+  border: 1px solid #d6e3ea;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #eef6f7;
+  color: #36545a;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.filters label {
+  display: grid;
+  gap: 6px;
+  color: #334151;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.filters label:nth-last-of-type(1) {
+  grid-column: 1 / -1;
+}
+
+input,
+select,
+button {
+  min-height: 40px;
+  width: 100%;
+  border: 1px solid #c9d2dc;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.reset-button {
+  grid-column: 1 / -1;
+  border-color: var(--accent);
+  color: #fff;
+  background: var(--accent);
+  font-weight: 700;
+}
+
+.reset-button:hover {
+  background: var(--accent-strong);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 8px;
+}
+
+.stat {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.stat strong {
+  display: block;
+  font-size: 20px;
+}
+
+.stat span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.incident-list {
+  display: grid;
+  min-height: 0;
+  gap: 10px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.incident-card {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  padding: 12px;
+  background: #fff;
+  text-align: left;
+}
+
+.incident-card[data-type="关联反恐行动"] {
+  border-left-color: var(--teal);
+}
+
+.incident-card:hover,
+.incident-card.active {
+  border-color: #9fb0bf;
+  background: #fdf7f3;
+}
+
+.incident-card h2 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: #eef2f5;
+  color: #374759;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.tag.high {
+  background: #ffe7e1;
+  color: var(--accent-strong);
+}
+
+.tag.medium {
+  background: #fff1d7;
+  color: var(--amber);
+}
+
+.tag.candidate {
+  background: #e7efff;
+  color: #1f57a7;
+}
+
+.map-area {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #dce5ed;
+}
+
+.legend {
+  position: absolute;
+  z-index: 3;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-width: calc(100% - 28px);
+  border: 1px solid rgba(120, 138, 154, 0.45);
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #354455;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 8px 22px rgba(22, 32, 42, 0.12);
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+
+.legend-dot.attack {
+  background: #d04a3a;
+  border: 2px solid #8f2323;
+}
+
+.legend-dot.response {
+  background: #1d8d91;
+  border: 2px solid #176f73;
+}
+
+.map {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+}
+
+.detail {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  display: grid;
+  gap: 10px;
+  min-height: 180px;
+  max-height: 32vh;
+  overflow: auto;
+  padding: 18px 22px;
+  border-top: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.detail h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.detail p {
+  margin: 0;
+  color: #344353;
+  line-height: 1.6;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.detail-cell {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 10px;
+  background: #fbfcfd;
+}
+
+.detail-cell span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.detail-cell strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+.media-section {
+  display: grid;
+  gap: 10px;
+}
+
+.media-section h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.media-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.media-card {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fbfcfd;
+}
+
+.media-card img {
+  display: block;
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  background: #dce5ed;
+}
+
+.media-card figcaption {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  color: #3b4a5a;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.media-card figcaption strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.media-card figcaption small,
+.media-note {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.media-card a {
+  color: var(--teal);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.media-card a:hover {
+  text-decoration: underline;
+}
+
+.sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sources a {
+  color: var(--teal);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.sources a:hover {
+  text-decoration: underline;
+}
+
+.empty {
+  align-self: center;
+  color: var(--muted);
+}
+
+.leaflet-popup-content {
+  min-width: 220px;
+}
+
+@media (max-width: 920px) {
+  .app-shell {
+    padding: 0;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100vh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .panel {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .map {
+    height: 56vh;
+    min-height: 420px;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .media-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 540px) {
+  .filters,
+  .stats,
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  h1 {
+    font-size: 22px;
+  }
+}
+
+
+===== data/incidents.json =====
+
+[
+  {
+    "id": "pk-2026-06-27-karachi-rangers-hq",
+    "date": "2026-06-27",
+    "country": "Pakistan",
+    "region": "Sindh",
+    "city": "Karachi",
+    "latitude": 24.9206,
+    "longitude": 67.1167,
+    "title": "卡拉奇 Sindh Rangers 总部遭爆炸物车辆袭击",
+    "incidentType": "恐袭",
+    "severity": "高",
+    "confidence": "高",
+    "actor": "Jamaat-ul-Ahrar reportedly claimed responsibility",
+    "target": "Pakistan Rangers provincial headquarters",
+    "fatalities": {
+      "reportedMinimum": 6,
+      "reportedMaximum": 10,
+      "note": "AP 报道至少 3 名准军事人员和 3 名袭击者死亡；其他媒体对安全人员和袭击者数字存在差异。"
+    },
+    "summary": "公开报道显示，2026-06-27 一名武装人员驾驶装载爆炸物的车辆冲撞位于卡拉奇 Gulistan-e-Jauhar 一带的 Pakistan Rangers 省级总部，随后发生交火。该事件被报道为近期巴基斯坦针对安全力量袭击上升的一部分。",
+    "sources": [
+      {
+        "name": "Associated Press",
+        "url": "https://apnews.com/article/c587c48d9bceba758ede65b34bea75cd"
+      },
+      {
+        "name": "Economic Times / PTI",
+        "url": "https://m.economictimes.com/news/international/world-news/pakistans-karachi-rocked-by-explosion-gunfire-reported/articleshow/132039519.cms"
+      }
+    ],
+    "media": [],
+    "mediaNote": "已核验来源中，AP 正文未提供可用现场图片；Economic Times 页面图片标注为 AI generated image for representation，因此未作为现场信源图片展示。",
+    "lastReviewed": "2026-06-30"
+  },
+  {
+    "id": "pk-2026-06-29-afghan-border-operation",
+    "date": "2026-06-29",
+    "country": "Pakistan",
+    "region": "Khyber Pakhtunkhwa / Afghan border",
+    "city": "Border area",
+    "latitude": 33.7645,
+    "longitude": 70.5146,
+    "title": "巴阿边境涉恐目标地面行动及空袭报道",
+    "incidentType": "关联反恐行动",
+    "severity": "中",
+    "confidence": "中",
+    "actor": "Pakistani security forces; alleged TTP-linked targets",
+    "target": "Reported militant hideouts along the Pakistan-Afghanistan border",
+    "fatalities": {
+      "reportedMinimum": 29,
+      "reportedMaximum": 29,
+      "note": "AP 引述巴基斯坦方面称 29 名武装分子死亡；Guardian 引述阿富汗方面称跨境空袭造成平民伤亡。"
+    },
+    "summary": "在卡拉奇袭击后，巴基斯坦方面称其在巴阿边境针对 TTP 相关目标实施地面行动和空袭。该条目作为涉恐关联事件纳入地图，便于展示恐袭后的安全响应链条，但不应与在巴基斯坦境内发生的恐袭案件混同。",
+    "sources": [
+      {
+        "name": "Associated Press",
+        "url": "https://apnews.com/article/fab8de4e4e82590da5a259587e0b84ff"
+      },
+      {
+        "name": "The Guardian",
+        "url": "https://www.theguardian.com/world/2026/jun/29/pakistan-deadly-airstrikes-afghanistan-border"
+      }
+    ],
+    "media": [
+      {
+        "title": "Chamkani district airstrike aftermath",
+        "imageUrl": "https://i.guim.co.uk/img/media/1e898d19b651fc4b4dbddfa7038b4572fb387bf1/837_1_4915_3932/master/4915.jpg?crop=none&dpr=1&s=none&width=465",
+        "caption": "Paktia province Chamkani district airstrike aftermath, showing a ruined multi-storey building.",
+        "credit": "Saifullah Zahir/AP, via The Guardian",
+        "sourceName": "The Guardian / AP",
+        "sourceUrl": "https://www.theguardian.com/world/2026/jun/29/pakistan-deadly-airstrikes-afghanistan-border",
+        "verificationNote": "Guardian 图注说明为 Chamkani district, Paktia province 空袭后建筑损毁现场。"
+      },
+      {
+        "title": "Debris at the Chamkani airstrike scene",
+        "imageUrl": "https://i.guim.co.uk/img/media/b5e734b1d6277915af802f2a6b1cb40bb93e103a/842_0_5000_4000/master/5000.jpg?crop=none&dpr=1&s=none&width=445",
+        "caption": "Debris and rubble at the scene of the airstrikes in Chamkani district.",
+        "credit": "Saifullah Zahir/AP, via The Guardian",
+        "sourceName": "The Guardian / AP",
+        "sourceUrl": "https://www.theguardian.com/world/2026/jun/29/pakistan-deadly-airstrikes-afghanistan-border",
+        "verificationNote": "Guardian 图注说明为 Chamkani district 空袭现场瓦砾与碎片。"
+      }
+    ],
+    "mediaNote": "该条为恐袭后的关联反恐行动，图片来自 Guardian 页面中带 AP 摄影署名的现场图注。",
+    "lastReviewed": "2026-06-30"
+  }
+]
+
+
+===== data/live-incidents.json =====
+
+{
+  "metadata": {
+    "schemaVersion": "1.0",
+    "mode": "manual-seed",
+    "generatedAt": "2026-07-02T00:00:00.000Z",
+    "query": "Manual seed from reviewed incidents",
+    "timespan": "seed",
+    "reviewedCount": 2,
+    "autoCandidateCount": 0,
+    "caveat": "这是在线自动数据文件的初始种子。部署后 GitHub Actions 会定时用 GDELT 候选报道刷新该文件。"
+  },
+  "incidents": [
+    {
+      "id": "pk-2026-06-27-karachi-rangers-hq",
+      "date": "2026-06-27",
+      "country": "Pakistan",
+      "region": "Sindh",
+      "city": "Karachi",
+      "latitude": 24.9206,
+      "longitude": 67.1167,
+      "title": "卡拉奇 Sindh Rangers 总部遭爆炸物车辆袭击",
+      "incidentType": "恐袭",
+      "severity": "高",
+      "confidence": "高",
+      "reviewStatus": "reviewed",
+      "actor": "Jamaat-ul-Ahrar reportedly claimed responsibility",
+      "target": "Pakistan Rangers provincial headquarters",
+      "fatalities": {
+        "reportedMinimum": 6,
+        "reportedMaximum": 10,
+        "note": "AP 报道至少 3 名准军事人员和 3 名袭击者死亡；其他媒体对安全人员和袭击者数字存在差异。"
+      },
+      "summary": "公开报道显示，2026-06-27 一名武装人员驾驶装载爆炸物的车辆冲撞位于卡拉奇 Gulistan-e-Jauhar 一带的 Pakistan Rangers 省级总部，随后发生交火。该事件被报道为近期巴基斯坦针对安全力量袭击上升的一部分。",
+      "sources": [
+        {
+          "name": "Associated Press",
+          "url": "https://apnews.com/article/c587c48d9bceba758ede65b34bea75cd"
+        },
+        {
+          "name": "Economic Times / PTI",
+          "url": "https://m.economictimes.com/news/international/world-news/pakistans-karachi-rocked-by-explosion-gunfire-reported/articleshow/132039519.cms"
+        }
+      ],
+      "media": [],
+      "mediaNote": "已核验来源中，AP 正文未提供可用现场图片；Economic Times 页面图片标注为 AI generated image for representation，因此未作为现场信源图片展示。",
+      "lastReviewed": "2026-06-30"
+    },
+    {
+      "id": "pk-2026-06-29-afghan-border-operation",
+      "date": "2026-06-29",
+      "country": "Pakistan",
+      "region": "Khyber Pakhtunkhwa / Afghan border",
+      "city": "Border area",
+      "latitude": 33.7645,
+      "longitude": 70.5146,
+      "title": "巴阿边境涉恐目标地面行动及空袭报道",
+      "incidentType": "关联反恐行动",
+      "severity": "中",
+      "confidence": "中",
+      "reviewStatus": "reviewed",
+      "actor": "Pakistani security forces; alleged TTP-linked targets",
+      "target": "Reported militant hideouts along the Pakistan-Afghanistan border",
+      "fatalities": {
+        "reportedMinimum": 29,
+        "reportedMaximum": 29,
+        "note": "AP 引述巴基斯坦方面称 29 名武装分子死亡；Guardian 引述阿富汗方面称跨境空袭造成平民伤亡。"
+      },
+      "summary": "在卡拉奇袭击后，巴基斯坦方面称其在巴阿边境针对 TTP 相关目标实施地面行动和空袭。该条目作为涉恐关联事件纳入地图，便于展示恐袭后的安全响应链条，但不应与在巴基斯坦境内发生的恐袭案件混同。",
+      "sources": [
+        {
+          "name": "Associated Press",
+          "url": "https://apnews.com/article/fab8de4e4e82590da5a259587e0b84ff"
+        },
+        {
+          "name": "The Guardian",
+          "url": "https://www.theguardian.com/world/2026/jun/29/pakistan-deadly-airstrikes-afghanistan-border"
+        }
+      ],
+      "media": [
+        {
+          "title": "Chamkani district airstrike aftermath",
+          "imageUrl": "https://i.guim.co.uk/img/media/1e898d19b651fc4b4dbddfa7038b4572fb387bf1/837_1_4915_3932/master/4915.jpg?crop=none&dpr=1&s=none&width=465",
+          "caption": "Paktia province Chamkani district airstrike aftermath, showing a ruined multi-storey building.",
+          "credit": "Saifullah Zahir/AP, via The Guardian",
+          "sourceName": "The Guardian / AP",
+          "sourceUrl": "https://www.theguardian.com/world/2026/jun/29/pakistan-deadly-airstrikes-afghanistan-border",
+          "verificationNote": "Guardian 图注说明为 Chamkani district, Paktia province 空袭后建筑损毁现场。"
+        },
+        {
+          "title": "Debris at the Chamkani airstrike scene",
+          "imageUrl": "https://i.guim.co.uk/img/media/b5e734b1d6277915af802f2a6b1cb40bb93e103a/842_0_5000_4000/master/5000.jpg?crop=none&dpr=1&s=none&width=445",
+          "caption": "Debris and rubble at the scene of the airstrikes in Chamkani district.",
+          "credit": "Saifullah Zahir/AP, via The Guardian",
+          "sourceName": "The Guardian / AP",
+          "sourceUrl": "https://www.theguardian.com/world/2026/jun/29/pakistan-deadly-airstrikes-afghanistan-border",
+          "verificationNote": "Guardian 图注说明为 Chamkani district 空袭现场瓦砾与碎片。"
+        }
+      ],
+      "mediaNote": "该条为恐袭后的关联反恐行动，图片来自 Guardian 页面中带 AP 摄影署名的现场图注。",
+      "lastReviewed": "2026-06-30"
+    }
+  ]
+}
+
+
+===== scripts/fetch-gdelt.mjs =====
+
+import { writeFile } from "node:fs/promises";
+import https from "node:https";
+
+const query = [
+  "Pakistan",
+  "(terror OR terrorism OR militant OR suicide attack OR bombing)",
+  "sourcelang:english",
+].join(" ");
+
+const url = new URL("https://api.gdeltproject.org/api/v2/doc/doc");
+url.searchParams.set("query", query);
+url.searchParams.set("mode", "ArtList");
+url.searchParams.set("format", "json");
+url.searchParams.set("timespan", "1week");
+url.searchParams.set("maxrecords", "50");
+url.searchParams.set("sort", "HybridRel");
+
+const payload = await getJson(url);
+const articles = (payload.articles ?? []).map((article) => ({
+  title: article.title,
+  url: article.url,
+  source: article.domain,
+  publishedAt: article.seendate,
+  language: article.language,
+}));
+
+await writeFile(
+  new URL("../data/gdelt-articles.latest.json", import.meta.url),
+  `${JSON.stringify({ fetchedAt: new Date().toISOString(), query, articles }, null, 2)}\n`,
+);
+
+console.log(`Fetched ${articles.length} candidate articles.`);
+console.log("Review data/gdelt-articles.latest.json, then manually promote confirmed cases into data/incidents.json.");
+
+function getJson(targetUrl) {
+  return new Promise((resolve, reject) => {
+    https
+      .get(targetUrl, (response) => {
+        let body = "";
+        response.setEncoding("utf8");
+        response.on("data", (chunk) => {
+          body += chunk;
+        });
+        response.on("end", () => {
+          if (response.statusCode < 200 || response.statusCode >= 300) {
+            reject(new Error(`GDELT returned ${response.statusCode}: ${body.slice(0, 300)}`));
+            return;
+          }
+          resolve(JSON.parse(body));
+        });
+      })
+      .on("error", reject);
+  });
+}
+
+
+===== scripts/update-live-data.mjs =====
+
+import { readFile, writeFile } from "node:fs/promises";
+import crypto from "node:crypto";
+import https from "node:https";
+
+const query = process.env.OSINT_QUERY ?? [
+  "Pakistan",
+  "(terror OR terrorist OR terrorism OR militant OR militants OR suicide attack OR bombing OR blast OR gunmen OR TTP OR BLA)",
+  "sourcelang:english",
+].join(" ");
+const timespan = process.env.OSINT_TIMESPAN ?? "3days";
+const maxRecords = process.env.OSINT_MAX_RECORDS ?? "75";
+
+const reviewedIncidents = await readJson("../data/incidents.json");
+const payload = await fetchGdeltArticles();
+const articles = (payload.articles ?? []).map(normalizeArticle).filter(isRelevantArticle);
+const candidates = articles
+  .filter((article) => !isReviewedDuplicate(article, reviewedIncidents))
+  .map(articleToCandidateIncident)
+  .slice(0, 30);
+
+const liveData = {
+  metadata: {
+    schemaVersion: "1.0",
+    mode: "automatic-gdelt-plus-reviewed",
+    generatedAt: new Date().toISOString(),
+    query,
+    timespan,
+    reviewedCount: reviewedIncidents.length,
+    autoCandidateCount: candidates.length,
+    caveat: "自动候选来自 GDELT 新闻检索，尚未完成逐条人工核验；用于态势发现，不等同于最终事实裁定。",
+  },
+  incidents: [
+    ...reviewedIncidents.map((incident) => ({ reviewStatus: "reviewed", ...incident })),
+    ...candidates,
+  ],
+};
+
+await writeFile(
+  new URL("../data/gdelt-articles.latest.json", import.meta.url),
+  `${JSON.stringify({ fetchedAt: liveData.metadata.generatedAt, query, timespan, articles }, null, 2)}\n`,
+);
+await writeFile(
+  new URL("../data/live-incidents.json", import.meta.url),
+  `${JSON.stringify(liveData, null, 2)}\n`,
+);
+
+console.log(`Reviewed incidents: ${reviewedIncidents.length}`);
+console.log(`GDELT candidate articles: ${articles.length}`);
+console.log(`Auto candidate incidents: ${candidates.length}`);
+console.log("Wrote data/live-incidents.json and data/gdelt-articles.latest.json.");
+
+async function fetchGdeltArticles() {
+  const url = new URL("https://api.gdeltproject.org/api/v2/doc/doc");
+  url.searchParams.set("query", query);
+  url.searchParams.set("mode", "ArtList");
+  url.searchParams.set("format", "json");
+  url.searchParams.set("timespan", timespan);
+  url.searchParams.set("maxrecords", maxRecords);
+  url.searchParams.set("sort", "HybridRel");
+  return getJson(url);
+}
+
+async function readJson(relativePath) {
+  const raw = await readFile(new URL(relativePath, import.meta.url), "utf8");
+  return JSON.parse(raw);
+}
+
+function normalizeArticle(article) {
+  return {
+    title: article.title ?? "",
+    url: article.url ?? "",
+    source: article.domain ?? article.sourceCountry ?? "Unknown source",
+    publishedAt: parseGdeltDate(article.seendate),
+    language: article.language,
+    imageUrl: article.socialimage || "",
+  };
+}
+
+function parseGdeltDate(value) {
+  if (!value) {
+    return new Date().toISOString();
+  }
+
+  const compact = String(value).replace(/\D/g, "");
+  if (compact.length >= 14) {
+    const iso = `${compact.slice(0, 4)}-${compact.slice(4, 6)}-${compact.slice(6, 8)}T${compact.slice(8, 10)}:${compact.slice(10, 12)}:${compact.slice(12, 14)}Z`;
+    return iso;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.valueOf()) ? new Date().toISOString() : parsed.toISOString();
+}
+
+function isRelevantArticle(article) {
+  const text = `${article.title} ${article.source}`.toLowerCase();
+  const include = [
+    "attack",
+    "blast",
+    "bomb",
+    "bombing",
+    "gunmen",
+    "militant",
+    "militants",
+    "suicide",
+    "terror",
+    "terrorist",
+    "ttp",
+    "tehrik-i-taliban",
+    "baloch liberation",
+    "bla",
+  ];
+  const exclude = [
+    "cricket",
+    "movie",
+    "stock",
+    "market",
+    "weather",
+    "recipe",
+  ];
+
+  return include.some((term) => text.includes(term)) && !exclude.some((term) => text.includes(term));
+}
+
+function isReviewedDuplicate(article, reviewedIncidents) {
+  const articleText = normalizeText(`${article.title} ${article.url}`);
+  return reviewedIncidents.some((incident) => {
+    const incidentText = normalizeText(`${incident.title} ${incident.summary}`);
+    const sourceUrls = (incident.sources ?? []).map((source) => source.url);
+    return sourceUrls.includes(article.url) || hasMeaningfulOverlap(articleText, incidentText);
+  });
+}
+
+function hasMeaningfulOverlap(a, b) {
+  const wordsA = new Set(a.split(" ").filter((word) => word.length > 4));
+  const wordsB = new Set(b.split(" ").filter((word) => word.length > 4));
+  let overlap = 0;
+  for (const word of wordsA) {
+    if (wordsB.has(word)) {
+      overlap += 1;
+    }
+  }
+  return overlap >= 5;
+}
+
+function articleToCandidateIncident(article) {
+  const location = inferLocation(article.title);
+  const date = article.publishedAt.slice(0, 10);
+  const id = `gdelt-${date}-${hash(`${article.title}-${article.url}`)}`;
+  const incidentType = inferIncidentType(article.title);
+
+  return {
+    id,
+    date,
+    country: "Pakistan",
+    region: location.region,
+    city: location.city,
+    latitude: location.latitude,
+    longitude: location.longitude,
+    title: article.title,
+    incidentType,
+    severity: inferSeverity(article.title),
+    confidence: "自动候选",
+    reviewStatus: "auto-candidate",
+    actor: inferActor(article.title),
+    target: "待人工核验",
+    fatalities: {
+      reportedMinimum: null,
+      reportedMaximum: null,
+      note: "自动候选未解析可靠伤亡数字，需回看原文核验。",
+    },
+    summary: `GDELT 自动检索到的涉恐候选报道：${article.title}。该条目尚未人工核验，地点为基于标题关键词的粗定位。`,
+    sources: [
+      {
+        name: article.source,
+        url: article.url,
+      },
+    ],
+    media: [],
+    mediaNote: "自动候选不自动展示图片；需人工核验图注、署名和现场关联性后补充。",
+    lastReviewed: null,
+  };
+}
+
+function inferLocation(title) {
+  const text = title.toLowerCase();
+  const locations = [
+    ["karachi", "Karachi", "Sindh", 24.8607, 67.0011],
+    ["sindh", "Sindh", "Sindh", 25.8943, 68.5247],
+    ["peshawar", "Peshawar", "Khyber Pakhtunkhwa", 34.0151, 71.5249],
+    ["bannu", "Bannu", "Khyber Pakhtunkhwa", 32.9861, 70.6042],
+    ["dera ismail khan", "Dera Ismail Khan", "Khyber Pakhtunkhwa", 31.8327, 70.9024],
+    ["di khan", "Dera Ismail Khan", "Khyber Pakhtunkhwa", 31.8327, 70.9024],
+    ["north waziristan", "North Waziristan", "Khyber Pakhtunkhwa", 32.9746, 70.1456],
+    ["south waziristan", "South Waziristan", "Khyber Pakhtunkhwa", 32.1206, 69.5898],
+    ["waziristan", "Waziristan", "Khyber Pakhtunkhwa", 32.3054, 69.7596],
+    ["bajaur", "Bajaur", "Khyber Pakhtunkhwa", 34.6833, 71.5000],
+    ["kurram", "Kurram", "Khyber Pakhtunkhwa", 33.7411, 70.3444],
+    ["khyber", "Khyber", "Khyber Pakhtunkhwa", 34.0259, 71.1154],
+    ["lakki marwat", "Lakki Marwat", "Khyber Pakhtunkhwa", 32.6079, 70.9114],
+    ["quetta", "Quetta", "Balochistan", 30.1798, 66.9750],
+    ["balochistan", "Balochistan", "Balochistan", 28.4907, 65.0958],
+    ["mastung", "Mastung", "Balochistan", 29.7997, 66.8455],
+    ["gwadar", "Gwadar", "Balochistan", 25.1264, 62.3225],
+    ["turbat", "Turbat", "Balochistan", 26.0023, 63.0500],
+    ["khuzdar", "Khuzdar", "Balochistan", 27.8119, 66.6108],
+    ["lahore", "Lahore", "Punjab", 31.5204, 74.3587],
+    ["punjab", "Punjab", "Punjab", 31.1704, 72.7097],
+    ["islamabad", "Islamabad", "Islamabad Capital Territory", 33.6844, 73.0479],
+    ["rawalpindi", "Rawalpindi", "Punjab", 33.5651, 73.0169],
+  ];
+
+  const match = locations.find(([keyword]) => text.includes(keyword));
+  if (match) {
+    return {
+      city: match[1],
+      region: match[2],
+      latitude: match[3],
+      longitude: match[4],
+    };
+  }
+
+  return {
+    city: "Pakistan (unresolved)",
+    region: "Unresolved",
+    latitude: 30.3753,
+    longitude: 69.3451,
+  };
+}
+
+function inferIncidentType(title) {
+  const text = title.toLowerCase();
+  if (/(operation|raid|airstrike|arrest|security forces|militants killed)/.test(text)) {
+    return "关联反恐行动";
+  }
+  return "未核验候选";
+}
+
+function inferSeverity(title) {
+  const text = title.toLowerCase();
+  if (/(suicide|bomb|blast|killed|dead|massacre|fatal)/.test(text)) {
+    return "高";
+  }
+  if (/(attack|gunmen|militant|terror)/.test(text)) {
+    return "中";
+  }
+  return "低";
+}
+
+function inferActor(title) {
+  const text = title.toLowerCase();
+  if (text.includes("ttp") || text.includes("tehrik-i-taliban")) {
+    return "TTP / Tehrik-i-Taliban Pakistan candidate mention";
+  }
+  if (text.includes("bla") || text.includes("baloch liberation")) {
+    return "Baloch militant group candidate mention";
+  }
+  if (text.includes("islamic state") || text.includes("isis") || text.includes("is-k")) {
+    return "Islamic State candidate mention";
+  }
+  return "待人工核验";
+}
+
+function normalizeText(value) {
+  return String(value)
+    .toLowerCase()
+    .replace(/https?:\/\/\S+/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function hash(value) {
+  return crypto.createHash("sha1").update(value).digest("hex").slice(0, 12);
+}
+
+function getJson(targetUrl) {
+  return new Promise((resolve, reject) => {
+    https
+      .get(targetUrl, (response) => {
+        let body = "";
+        response.setEncoding("utf8");
+        response.on("data", (chunk) => {
+          body += chunk;
+        });
+        response.on("end", () => {
+          if (response.statusCode < 200 || response.statusCode >= 300) {
+            reject(new Error(`GDELT returned ${response.statusCode}: ${body.slice(0, 300)}`));
+            return;
+          }
+          resolve(JSON.parse(body));
+        });
+      })
+      .on("error", reject);
+  });
+}
+
+
+===== scripts/validate-data.mjs =====
+
+import { access, readFile } from "node:fs/promises";
+
+const requiredFields = [
+  "id",
+  "date",
+  "region",
+  "city",
+  "latitude",
+  "longitude",
+  "title",
+  "incidentType",
+  "severity",
+  "confidence",
+  "actor",
+  "target",
+  "summary",
+  "sources",
+];
+
+const errors = [];
+
+const manualIncidents = await readDataset("../data/incidents.json");
+validateIncidentArray("data/incidents.json", manualIncidents);
+
+const liveUrl = new URL("../data/live-incidents.json", import.meta.url);
+if (await exists(liveUrl)) {
+  const livePayload = await readDataset("../data/live-incidents.json");
+  const liveIncidents = Array.isArray(livePayload) ? livePayload : livePayload.incidents;
+  validateIncidentArray("data/live-incidents.json", liveIncidents);
+
+  if (!Array.isArray(livePayload) && !livePayload.metadata?.generatedAt) {
+    errors.push("data/live-incidents.json metadata.generatedAt is required.");
+  }
+}
+
+if (errors.length > 0) {
+  console.error(errors.join("\n"));
+  process.exit(1);
+}
+
+console.log(`Validated ${manualIncidents.length} reviewed incident records.`);
+
+async function readDataset(relativePath) {
+  const raw = await readFile(new URL(relativePath, import.meta.url), "utf8");
+  return JSON.parse(raw);
+}
+
+async function exists(url) {
+  try {
+    await access(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function validateIncidentArray(datasetName, incidents) {
+  const ids = new Set();
+
+  if (!Array.isArray(incidents)) {
+    errors.push(`${datasetName} must contain an array or an object with incidents array.`);
+    return;
+  }
+
+  for (const [index, incident] of incidents.entries()) {
+    for (const field of requiredFields) {
+      if (!(field in incident)) {
+        errors.push(`${datasetName} incident #${index + 1} is missing field: ${field}`);
+      }
+    }
+
+    if (ids.has(incident.id)) {
+      errors.push(`${datasetName} duplicate incident id: ${incident.id}`);
+    }
+    ids.add(incident.id);
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(incident.date)) {
+      errors.push(`${datasetName} ${incident.id} has invalid date format: ${incident.date}`);
+    }
+
+    if (Number.isNaN(Number(incident.latitude)) || Number.isNaN(Number(incident.longitude))) {
+      errors.push(`${datasetName} ${incident.id} must have numeric latitude and longitude.`);
+    }
+
+    if (!Array.isArray(incident.sources) || incident.sources.length === 0) {
+      errors.push(`${datasetName} ${incident.id} must include at least one source.`);
+    }
+
+    if ("media" in incident) {
+      if (!Array.isArray(incident.media)) {
+        errors.push(`${datasetName} ${incident.id} media must be an array.`);
+      } else {
+        for (const [mediaIndex, media] of incident.media.entries()) {
+          for (const field of ["title", "imageUrl", "caption", "credit", "sourceName", "sourceUrl"]) {
+            if (!media[field]) {
+              errors.push(`${datasetName} ${incident.id} media #${mediaIndex + 1} is missing field: ${field}`);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+===== docs/data-methodology.md =====
+
+# 数据方法
+
+## 范围
+
+- 时间范围：默认关注最近 7 天。
+- 地理范围：巴基斯坦境内恐怖袭击案件；与案件直接相关的跨境反恐行动可作为“关联反恐行动”独立标注。
+- 来源范围：优先使用国际通讯社、主流媒体、当地权威媒体、政府或安全机构公开通报。
+- 自动候选范围：GDELT 检索到的相关文章只作为候选线索，默认标注为 `reviewStatus: "auto-candidate"`。
+
+## 入库标准
+
+事件进入 `data/incidents.json` 前需要满足：
+
+- 有明确日期。
+- 有可定位地点，至少精确到城市或边境区域。
+- 有公开来源链接。
+- 能区分事件类型，例如“恐袭”“关联反恐行动”“未确认报道”。
+- 对伤亡数字存在分歧时，保留区间并在 `fatalities.note` 说明。
+- 图片信源需要有原文页面、图片地址、图注、摄影或机构署名；AI 生成示意图和无法确认现场关联的图片不作为证据图片。
+
+## 更新步骤
+
+1. 运行 `npm run fetch:data` 抓取近一周候选报道。
+2. 人工阅读来源，排除重复报道、观点文章和无法确认地点的记录。
+3. 将确认事件写入 `data/incidents.json`。
+4. 若有可靠图片，补充 `media` 字段；若没有，使用 `mediaNote` 说明图片缺口。
+5. 运行 `npm run validate`。
+6. 刷新页面检查地图、筛选、详情面板和图片信源是否正常。
+
+## 注意事项
+
+涉恐开源情报存在滞后、重复报道和数字分歧。页面中的 `confidence` 字段表示资料可信度，而不是对事件事实的最终裁定。
+
+自动候选的 `confidence` 为“自动候选”，表示尚未完成事实核验。该类记录可用于发现线索，但不应直接用于正式结论。
+
+
+===== docs/online-deployment.md =====
+
+# 在线自动版部署说明
+
+## 目标架构
+
+本项目采用轻量静态部署方案：
+
+- 前端：GitHub Pages 托管 `index.html`、`src/`、`data/`。
+- 自动采集：GitHub Actions 定时运行 `npm run update:live`。
+- 数据源：GDELT DOC API 候选报道。
+- 数据文件：`data/live-incidents.json`。
+- 人工基准数据：`data/incidents.json`。
+
+## 上线步骤
+
+1. 创建 GitHub 仓库。
+2. 上传项目全部文件，包括隐藏目录 `.github/` 和 `.nojekyll`。
+3. 打开仓库设置。
+4. 进入 `Pages`。
+5. 将部署来源设置为 `GitHub Actions`。
+6. 推送代码到 `main` 或 `master`。
+7. 等待 `Deploy live OSINT map` 工作流完成。
+8. 使用 GitHub Pages 给出的公开 URL 访问页面。
+
+## 自动更新逻辑
+
+`.github/workflows/deploy-pages.yml` 会：
+
+- 每小时运行一次。
+- 调用 GDELT 查询近 3 天候选报道。
+- 合并人工核验事件和自动候选事件。
+- 校验数据字段。
+- 部署最新静态站点。
+
+## 人工核验建议
+
+自动候选不应直接作为最终事实引用。建议人工核验：
+
+- 是否确为恐怖袭击，而非普通刑案、军事行动或旧闻重发。
+- 日期是否为事件发生日期，而非报道发布时间。
+- 地点是否可精确到城市、区县或设施。
+- 伤亡数字是否有多源印证。
+- 组织声称负责是否来自可信报道。
+- 图片是否有明确图注、摄影署名和来源页面。
+
+核验后，将事件从候选报道整理进 `data/incidents.json`，并把 `reviewStatus` 设为 `reviewed`。
+
+
+===== docs/source-log.md =====
+
+# 来源记录
+
+最后核验：2026-06-30
+
+## 已入库事件
+
+### 2026-06-27 卡拉奇 Sindh Rangers 总部袭击
+
+- Associated Press: https://apnews.com/article/c587c48d9bceba758ede65b34bea75cd
+- Economic Times / PTI: https://m.economictimes.com/news/international/world-news/pakistans-karachi-rocked-by-explosion-gunfire-reported/articleshow/132039519.cms
+
+### 2026-06-29 巴阿边境关联反恐行动
+
+- Associated Press: https://apnews.com/article/fab8de4e4e82590da5a259587e0b84ff
+- The Guardian: https://www.theguardian.com/world/2026/jun/29/pakistan-deadly-airstrikes-afghanistan-border
+
+## 检索备注
+
+检索关键词包括：
+
+- Pakistan terrorist attack June 24 2026 June 30 2026
+- Karachi Rangers headquarters suicide attack June 2026
+- Pakistan militants killed security personnel June 2026
+
+初版公开报道中，过去一周能明确定位并与巴基斯坦恐袭直接相关的核心案件是卡拉奇 Rangers 总部袭击；跨境行动作为关联链条单独标注。
+
+## 图片信源备注
+
+- 卡拉奇 Rangers 总部袭击：AP 正文未提供可用现场图片；Economic Times 页面图片标注为 AI generated image for representation，未作为现场信源图片使用。
+- 巴阿边境关联反恐行动：Guardian 页面包含 Saifullah Zahir/AP 摄影署名的 Chamkani district 空袭后现场图片，已作为图片信源展示。
+
+
+===== .github/workflows/deploy-pages.yml =====
+
+name: Deploy live OSINT map
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Generate live OSINT data
+        run: npm run update:live
+        env:
+          OSINT_TIMESPAN: 3days
+          OSINT_MAX_RECORDS: 75
+
+      - name: Validate data
+        run: npm run validate
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+
+===== .nojekyll =====
+
+

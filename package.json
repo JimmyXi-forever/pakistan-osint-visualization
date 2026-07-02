@@ -1,0 +1,22 @@
+{
+  "name": "pakistan-terrorism-osint-visualization",
+  "version": "0.1.0",
+  "private": true,
+  "description": "涉恐开源情报的可视化呈现：以巴基斯坦恐袭案件为例",
+  "scripts": {
+    "dev": "python3 -m http.server 4173",
+    "start": "npm run dev",
+    "serve": "python3 -m http.server 4173",
+    "validate": "node scripts/validate-data.mjs",
+    "fetch:data": "node scripts/fetch-gdelt.mjs",
+    "update:live": "node scripts/update-live-data.mjs"
+  },
+  "keywords": [
+    "osint",
+    "terrorism",
+    "pakistan",
+    "visualization",
+    "leaflet"
+  ],
+  "license": "UNLICENSED"
+}

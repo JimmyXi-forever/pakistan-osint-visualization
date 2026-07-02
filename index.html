@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>涉恐开源情报的可视化呈现 - 以巴基斯坦恐袭案件为例</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIINfQ7O67U8CmPlb5W7aJ0Mx0cwSHv95hk="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workspace">
+        <aside class="panel" aria-label="筛选与事件列表">
+          <div class="title-block">
+            <p class="eyebrow">Pakistan OSINT Watch</p>
+            <h1>涉恐开源情报可视化</h1>
+            <p class="subtitle">过去一周公开报道事件，支持时间、地区、类型筛选与地图交互。</p>
+            <p class="scope-note">数据窗口：2026-06-23 至 2026-06-30；默认显示已核验恐袭案件。</p>
+            <p class="data-status" id="dataStatus">正在读取在线数据...</p>
+          </div>
+
+          <form class="filters" id="filters">
+            <label>
+              起始日期
+              <input id="startDate" type="date" />
+            </label>
+            <label>
+              结束日期
+              <input id="endDate" type="date" />
+            </label>
+            <label>
+              地区
+              <select id="regionFilter">
+                <option value="all">全部地区</option>
+              </select>
+            </label>
+            <label>
+              事件类型
+              <select id="typeFilter">
+                <option value="all">全部类型</option>
+              </select>
+            </label>
+            <label>
+              关键词
+              <input id="keywordFilter" type="search" placeholder="城市、组织、目标..." />
+            </label>
+            <button class="reset-button" type="button" id="resetButton">重置</button>
+          </form>
+
+          <div class="stats" id="stats" aria-live="polite"></div>
+          <div class="incident-list" id="incidentList" aria-label="事件卡片"></div>
+        </aside>
+
+        <section class="map-area" aria-label="交互地图和事件详情">
+          <div id="map" class="map"></div>
+          <div class="legend" aria-label="地图图例">
+            <span><i class="legend-dot attack"></i>恐袭</span>
+            <span><i class="legend-dot response"></i>关联反恐行动</span>
+          </div>
+          <article class="detail" id="detail">
+            <p class="empty">点击地图标记或左侧事件卡片查看详情。</p>
+          </article>
+        </section>
+      </section>
+    </main>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
