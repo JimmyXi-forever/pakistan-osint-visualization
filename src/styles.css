@@ -338,38 +338,76 @@ button {
 
 .incident-list {
   display: grid;
+  align-content: start;
+  flex: 1 1 240px;
   min-height: 0;
-  gap: 10px;
-  overflow: auto;
-  padding-right: 4px;
+  gap: 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 6px 12px 0;
+  scrollbar-gutter: stable;
 }
 
 .incident-card {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
   border: 1px solid var(--line);
-  border-left: 4px solid var(--accent);
-  border-radius: 6px;
-  padding: 12px;
+  border-left: 5px solid var(--accent);
+  border-radius: 8px;
+  padding: 14px 14px 13px;
   background: #fff;
+  box-shadow: 0 4px 14px rgba(22, 32, 42, 0.04);
   text-align: left;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
 }
 
 .incident-card[data-type="关联反恐行动"] {
   border-left-color: var(--teal);
 }
 
-.incident-card:hover,
+.incident-card:hover {
+  border-color: #b7c4cf;
+  background: #fffdfb;
+  box-shadow: 0 8px 22px rgba(22, 32, 42, 0.08);
+  transform: translateY(-1px);
+}
+
 .incident-card.active {
-  border-color: #9fb0bf;
-  background: #fdf7f3;
+  border-color: #8fa5b7;
+  background: #f8fbfd;
+  box-shadow: inset 0 0 0 1px rgba(23, 111, 115, 0.15), 0 8px 20px rgba(22, 32, 42, 0.08);
 }
 
 .incident-card h2 {
   margin: 0;
-  font-size: 15px;
+  color: #1b2733;
+  font-size: 15.5px;
+  line-height: 1.38;
+  overflow-wrap: anywhere;
+}
+
+.incident-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  color: var(--muted);
+  font-size: 12.5px;
   line-height: 1.35;
+}
+
+.incident-meta span {
+  min-width: 0;
+}
+
+.incident-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .meta {
