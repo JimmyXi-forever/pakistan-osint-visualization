@@ -47,6 +47,9 @@ jobs:
         env:
           OSINT_TIMESPAN: 7days
           OSINT_MAX_RECORDS: 75
+          OSINT_REQUEST_TIMEOUT_MS: 45000
+          OSINT_RETRY_COUNT: 2
+          OSINT_RETRY_DELAY_MS: 10000
           OSINT_LIVE_CACHE_PATH: .osint-cache/live-incidents.json
 
       - name: Validate data
