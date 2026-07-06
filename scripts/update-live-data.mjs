@@ -9,35 +9,55 @@ const query = process.env.OSINT_QUERY ?? [
 ].join(" ");
 const timespan = process.env.OSINT_TIMESPAN ?? "3days";
 const maxRecords = process.env.OSINT_MAX_RECORDS ?? "75";
+const gdeltEndpoint = process.env.OSINT_GDELT_ENDPOINT ?? "https://api.gdeltproject.org/api/v2/doc/doc";
+const requestTimeoutMs = Number(process.env.OSINT_REQUEST_TIMEOUT_MS ?? 15000);
+const retryCount = Number(process.env.OSINT_RETRY_COUNT ?? 3);
+const retryDelayMs = Number(process.env.OSINT_RETRY_DELAY_MS ?? 6000);
 
 const reviewedIncidents = await readJson("../data/incidents.json");
-const payload = await fetchGdeltArticles();
+const gdeltResult = await fetchGdeltArticlesSafely();
+const payload = gdeltResult.payload ?? {};
 const articles = (payload.articles ?? []).map(normalizeArticle).filter(isRelevantArticle);
 const candidates = articles
   .filter((article) => !isReviewedDuplicate(article, reviewedIncidents))
   .map(articleToCandidateIncident)
   .slice(0, 30);
+const fallbackLiveData = gdeltResult.ok ? null : await readOptionalJson("../data/live-incidents.json");
+const fallbackIncidents = Array.isArray(fallbackLiveData?.incidents) ? fallbackLiveData.incidents : null;
+const incidents = gdeltResult.ok
+  ? [
+      ...reviewedIncidents.map((incident) => ({ reviewStatus: "reviewed", ...incident })),
+      ...candidates,
+    ]
+  : fallbackIncidents ?? reviewedIncidents.map((incident) => ({ reviewStatus: "reviewed", ...incident }));
 
 const liveData = {
   metadata: {
     schemaVersion: "1.0",
-    mode: "automatic-gdelt-plus-reviewed",
+    mode: gdeltResult.ok
+      ? "automatic-gdelt-plus-reviewed"
+      : fallbackIncidents
+        ? "cached-live-data-gdelt-unavailable"
+        : "reviewed-only-gdelt-unavailable",
     generatedAt: new Date().toISOString(),
     query,
     timespan,
     reviewedCount: reviewedIncidents.length,
-    autoCandidateCount: candidates.length,
-    caveat: "自动候选来自 GDELT 新闻检索，尚未完成逐条人工核验；用于态势发现，不等同于最终事实裁定。",
+    autoCandidateCount: gdeltResult.ok
+      ? candidates.length
+      : incidents.filter((incident) => incident.reviewStatus === "auto-candidate").length,
+    caveat: gdeltResult.ok
+      ? "自动候选来自 GDELT 新闻检索，尚未完成逐条人工核验；用于态势发现，不等同于最终事实裁定。"
+      : "GDELT 实时检索暂不可用，本次部署沿用已有实时数据或人工核验数据，避免外部数据源短暂失败导致站点中断。",
+    gdeltStatus: gdeltResult.ok ? "ok" : "unavailable",
+    gdeltError: gdeltResult.error?.message,
   },
-  incidents: [
-    ...reviewedIncidents.map((incident) => ({ reviewStatus: "reviewed", ...incident })),
-    ...candidates,
-  ],
+  incidents,
 };
 
 await writeFile(
   new URL("../data/gdelt-articles.latest.json", import.meta.url),
-  `${JSON.stringify({ fetchedAt: liveData.metadata.generatedAt, query, timespan, articles }, null, 2)}\n`,
+  `${JSON.stringify({ fetchedAt: liveData.metadata.generatedAt, query, timespan, articles, error: gdeltResult.error?.message }, null, 2)}\n`,
 );
 await writeFile(
   new URL("../data/live-incidents.json", import.meta.url),
@@ -45,24 +65,44 @@ await writeFile(
 );
 
 console.log(`Reviewed incidents: ${reviewedIncidents.length}`);
+console.log(`GDELT status: ${gdeltResult.ok ? "ok" : "unavailable"}`);
+if (gdeltResult.error) {
+  console.warn(`GDELT fallback reason: ${gdeltResult.error.message}`);
+}
 console.log(`GDELT candidate articles: ${articles.length}`);
-console.log(`Auto candidate incidents: ${candidates.length}`);
+console.log(`Auto candidate incidents: ${liveData.metadata.autoCandidateCount}`);
 console.log("Wrote data/live-incidents.json and data/gdelt-articles.latest.json.");
 
 async function fetchGdeltArticles() {
-  const url = new URL("https://api.gdeltproject.org/api/v2/doc/doc");
+  const url = new URL(gdeltEndpoint);
   url.searchParams.set("query", query);
   url.searchParams.set("mode", "ArtList");
   url.searchParams.set("format", "json");
   url.searchParams.set("timespan", timespan);
   url.searchParams.set("maxrecords", maxRecords);
   url.searchParams.set("sort", "HybridRel");
-  return getJson(url);
+  return getJsonWithRetry(url);
+}
+
+async function fetchGdeltArticlesSafely() {
+  try {
+    return { ok: true, payload: await fetchGdeltArticles() };
+  } catch (error) {
+    return { ok: false, error };
+  }
 }
 
 async function readJson(relativePath) {
   const raw = await readFile(new URL(relativePath, import.meta.url), "utf8");
   return JSON.parse(raw);
+}
+
+async function readOptionalJson(relativePath) {
+  try {
+    return await readJson(relativePath);
+  } catch {
+    return null;
+  }
 }
 
 function normalizeArticle(article) {
@@ -272,9 +312,25 @@ function hash(value) {
   return crypto.createHash("sha1").update(value).digest("hex").slice(0, 12);
 }
 
+async function getJsonWithRetry(targetUrl) {
+  let lastError;
+  for (let attempt = 1; attempt <= retryCount; attempt += 1) {
+    try {
+      return await getJson(targetUrl);
+    } catch (error) {
+      lastError = error;
+      console.warn(`GDELT request attempt ${attempt}/${retryCount} failed: ${error.message}`);
+      if (attempt < retryCount) {
+        await sleep(attempt * retryDelayMs);
+      }
+    }
+  }
+  throw lastError;
+}
+
 function getJson(targetUrl) {
   return new Promise((resolve, reject) => {
-    https
+    const request = https
       .get(targetUrl, (response) => {
         let body = "";
         response.setEncoding("utf8");
@@ -286,9 +342,23 @@ function getJson(targetUrl) {
             reject(new Error(`GDELT returned ${response.statusCode}: ${body.slice(0, 300)}`));
             return;
           }
-          resolve(JSON.parse(body));
+          try {
+            resolve(JSON.parse(body));
+          } catch (error) {
+            reject(new Error(`GDELT returned invalid JSON: ${body.slice(0, 300)}`));
+          }
         });
       })
       .on("error", reject);
+
+    request.setTimeout(requestTimeoutMs, () => {
+      request.destroy(new Error(`GDELT request timed out after ${requestTimeoutMs}ms`));
+    });
+  });
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
   });
 }
