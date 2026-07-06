@@ -1,6 +1,7 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import crypto from "node:crypto";
 import https from "node:https";
+import path from "node:path";
 
 const query = process.env.OSINT_QUERY ?? [
   "Pakistan",
@@ -13,6 +14,7 @@ const gdeltEndpoint = process.env.OSINT_GDELT_ENDPOINT ?? "https://api.gdeltproj
 const requestTimeoutMs = Number(process.env.OSINT_REQUEST_TIMEOUT_MS ?? 15000);
 const retryCount = Number(process.env.OSINT_RETRY_COUNT ?? 3);
 const retryDelayMs = Number(process.env.OSINT_RETRY_DELAY_MS ?? 6000);
+const liveCachePath = process.env.OSINT_LIVE_CACHE_PATH ?? ".osint-cache/live-incidents.json";
 
 const reviewedIncidents = await readJson("../data/incidents.json");
 const gdeltResult = await fetchGdeltArticlesSafely();
@@ -22,8 +24,11 @@ const candidates = articles
   .filter((article) => !isReviewedDuplicate(article, reviewedIncidents))
   .map(articleToCandidateIncident)
   .slice(0, 30);
-const fallbackLiveData = gdeltResult.ok ? null : await readOptionalJson("../data/live-incidents.json");
+const fallbackLiveData = gdeltResult.ok
+  ? null
+  : await readOptionalJsonPath(liveCachePath) ?? await readOptionalJson("../data/live-incidents.json");
 const fallbackIncidents = Array.isArray(fallbackLiveData?.incidents) ? fallbackLiveData.incidents : null;
+const fallbackSource = fallbackLiveData?.metadata?.mode ? fallbackLiveData.metadata.mode : null;
 const incidents = gdeltResult.ok
   ? [
       ...reviewedIncidents.map((incident) => ({ reviewStatus: "reviewed", ...incident })),
@@ -51,6 +56,7 @@ const liveData = {
       : "GDELT 实时检索暂不可用，本次部署沿用已有实时数据或人工核验数据，避免外部数据源短暂失败导致站点中断。",
     gdeltStatus: gdeltResult.ok ? "ok" : "unavailable",
     gdeltError: gdeltResult.error?.message,
+    fallbackSource,
   },
   incidents,
 };
@@ -63,6 +69,9 @@ await writeFile(
   new URL("../data/live-incidents.json", import.meta.url),
   `${JSON.stringify(liveData, null, 2)}\n`,
 );
+if (gdeltResult.ok || incidents.some((incident) => incident.reviewStatus === "auto-candidate")) {
+  await writeJsonPath(liveCachePath, liveData);
+}
 
 console.log(`Reviewed incidents: ${reviewedIncidents.length}`);
 console.log(`GDELT status: ${gdeltResult.ok ? "ok" : "unavailable"}`);
@@ -71,6 +80,7 @@ if (gdeltResult.error) {
 }
 console.log(`GDELT candidate articles: ${articles.length}`);
 console.log(`Auto candidate incidents: ${liveData.metadata.autoCandidateCount}`);
+console.log(`Live data cache: ${liveCachePath}`);
 console.log("Wrote data/live-incidents.json and data/gdelt-articles.latest.json.");
 
 async function fetchGdeltArticles() {
@@ -103,6 +113,19 @@ async function readOptionalJson(relativePath) {
   } catch {
     return null;
   }
+}
+
+async function readOptionalJsonPath(filePath) {
+  try {
+    return JSON.parse(await readFile(filePath, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+async function writeJsonPath(filePath, value) {
+  await mkdir(path.dirname(filePath), { recursive: true });
+  await writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
 function normalizeArticle(article) {
