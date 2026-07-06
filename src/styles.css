@@ -346,6 +346,7 @@ button {
   overscroll-behavior: contain;
   padding: 2px 6px 12px 0;
   scrollbar-gutter: stable;
+  scroll-padding: 12px;
 }
 
 .incident-card {
