@@ -231,14 +231,14 @@ function renderList(incidents) {
       (incident) => `
         <button class="incident-card" data-id="${incident.id}" data-type="${incident.incidentType}">
           <h2>${incident.title}</h2>
-          <div class="meta">
+          <div class="incident-meta">
             <span>${formatDate.format(new Date(`${incident.date}T00:00:00+05:00`))}</span>
             <span>${incident.city} / ${incident.region}</span>
           </div>
-          <div class="meta">
+          <div class="incident-tags">
             <span class="tag ${severityClass[incident.severity] ?? ""}">${incident.severity}风险</span>
             <span class="tag">${incident.incidentType}</span>
-            ${incident.reviewStatus === "auto-candidate" ? '<span class="tag candidate">待核验</span>' : ""}
+            ${reviewStatusTag(incident.reviewStatus)}
           </div>
         </button>
       `,
@@ -248,6 +248,16 @@ function renderList(incidents) {
   elements.incidentList.querySelectorAll(".incident-card").forEach((card) => {
     card.addEventListener("click", () => selectIncident(card.dataset.id));
   });
+}
+
+function reviewStatusTag(status) {
+  if (status === "auto-candidate") {
+    return '<span class="tag candidate">自动候选</span>';
+  }
+  if (status === "manual-pending") {
+    return '<span class="tag candidate">人工待核验</span>';
+  }
+  return "";
 }
 
 function renderMarkers(incidents) {
@@ -334,7 +344,7 @@ function renderDetail(incident) {
         <span class="tag ${severityClass[incident.severity] ?? ""}">${incident.severity}风险</span>
         <span class="tag">${incident.incidentType}</span>
         <span class="tag">${incident.confidence}可信度</span>
-        ${incident.reviewStatus === "auto-candidate" ? '<span class="tag candidate">自动候选，未人工核验</span>' : ""}
+        ${reviewStatusTag(incident.reviewStatus)}
       </div>
       <h2>${incident.title}</h2>
     </div>
