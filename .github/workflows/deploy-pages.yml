@@ -34,11 +34,20 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Restore live OSINT cache
+        uses: actions/cache@v4
+        with:
+          path: .osint-cache
+          key: live-osint-cache-${{ github.run_id }}
+          restore-keys: |
+            live-osint-cache-
+
       - name: Generate live OSINT data
         run: npm run update:live
         env:
           OSINT_TIMESPAN: 7days
           OSINT_MAX_RECORDS: 75
+          OSINT_LIVE_CACHE_PATH: .osint-cache/live-incidents.json
 
       - name: Validate data
         run: npm run validate
