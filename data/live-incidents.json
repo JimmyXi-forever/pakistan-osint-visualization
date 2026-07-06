@@ -2,12 +2,13 @@
   "metadata": {
     "schemaVersion": "1.0",
     "mode": "manual-seed",
-    "generatedAt": "2026-07-02T00:00:00.000Z",
+    "generatedAt": "2026-07-06T00:00:00.000Z",
     "query": "Manual seed from reviewed incidents",
     "timespan": "seed",
     "reviewedCount": 2,
+    "manualPendingCount": 1,
     "autoCandidateCount": 0,
-    "caveat": "这是在线自动数据文件的初始种子。部署后 GitHub Actions 会定时用 GDELT 候选报道刷新该文件。"
+    "caveat": "这是在线自动数据文件的初始种子。部署后 GitHub Actions 会定时用 GDELT 候选报道刷新该文件；人工待核验条目用于提示态势线索，不等同于最终事实裁定。"
   },
   "incidents": [
     {
@@ -98,6 +99,37 @@
       ],
       "mediaNote": "该条为恐袭后的关联反恐行动，图片来自 Guardian 页面中带 AP 摄影署名的现场图注。",
       "lastReviewed": "2026-06-30"
+    },
+    {
+      "id": "pk-2026-07-04-gwadar-jiwani-coast-guard-camp",
+      "date": "2026-07-04",
+      "country": "Pakistan",
+      "region": "Balochistan",
+      "city": "Jiwani / Gwadar",
+      "latitude": 25.0678,
+      "longitude": 61.7456,
+      "title": "俾路支省 Jiwani 附近 Pakistan Coast Guard 营地遭 BLA 声称袭击",
+      "incidentType": "恐袭",
+      "severity": "高",
+      "confidence": "待核验",
+      "reviewStatus": "manual-pending",
+      "actor": "Baloch Liberation Army claimed responsibility; casualty claims remain unverified",
+      "target": "Pakistan Coast Guard camp in the Panwan area near Jiwani, Gwadar",
+      "fatalities": {
+        "reportedMinimum": null,
+        "reportedMaximum": null,
+        "note": "BLA 声称造成 30 多名巴方安全人员死亡，但公开独立核验不足；暂不录入确定伤亡数字。"
+      },
+      "summary": "公开媒体转述 BLA 声明称，2026-07-04 前后，俾路支省 Gwadar 区 Jiwani 附近 Panwan 地区一处 Pakistan Coast Guard 营地遭“fidayee”袭击。该条目作为人工待核验候选纳入地图，用于提示近期安全态势；伤亡、具体时间和袭击细节仍需更多可靠来源交叉核验。",
+      "sources": [
+        {
+          "name": "Times of India",
+          "url": "https://timesofindia.indiatimes.com/world/pakistan/bla-claims-fidayee-attack-killed-over-30-pakistani-security-personnel-in-gwadar/articleshow/132170639.cms"
+        }
+      ],
+      "media": [],
+      "mediaNote": "该条当前仅作文字线索展示；未发现可直接核验为现场图片的公开素材。",
+      "lastReviewed": "2026-07-06"
     }
   ]
 }
